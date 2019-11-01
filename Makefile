@@ -1,7 +1,8 @@
 CC=g++
-CFLAGS=-lglpk
+CFLAGS=-lglpk -I.
+DEPS=tree.h
 
-MVOLPS:
+MVOLPS: 2test.cpp tree.cpp
 	$(CC) 2test.cpp $(CFLAGS) -o MVOLPS
 
 .PHONY: MVOLPS

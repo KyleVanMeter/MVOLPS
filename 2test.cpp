@@ -1,13 +1,24 @@
 #include "InputParser.h"
 #include "eigen3/Eigen/Core"
 #include "glpk.h"
+#include "tree.h"
 
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <tuple>
 #include <typeinfo>
+#include <vector>
 
-enum MVOLP_FileType { MVOLP_LP = 1, MVOLP_MPS = 2 };
+namespace MVOLP {
+enum Operation { ADD = 1, MULT = 2 };
+enum RC { COL = 1, ROW = 2 };
+enum FileType { LP = 1, MPS = 2 };
+
+// This keeps track of which row, or column we make a change to when
+// standardizing so we can reconstruct the solution to the original problem
+std::vector<std::tuple<RC, int, Operation, double>> stackMachine;
+} // namespace MVOLP
 
 void standard(glp_prob *prob) {
   int rows = glp_get_num_rows(prob);
@@ -41,9 +52,15 @@ void standard(glp_prob *prob) {
         // The 0 is ignored in the GLP_UP case
         glp_set_row_bnds(prob, i, GLP_UP, 0, -1.0 * bound);
 
+        MVOLP::stackMachine.push_back(
+            std::make_tuple(MVOLP::ROW, i, MVOLP::MULT, -1.0));
+
         int len = glp_get_mat_row(prob, i, ind, val);
         for (int j = 1; j <= len; j++) {
           val[j] *= -1.0;
+
+          MVOLP::stackMachine.push_back(
+              std::make_tuple(MVOLP::COL, ind[j], MVOLP::MULT, -1.0));
         }
 
         glp_set_mat_row(prob, i, len, ind, val);
@@ -74,29 +91,42 @@ void standard(glp_prob *prob) {
         glp_set_row_bnds(prob, i, GLP_UP, 0, uBound);
 
         int newRow = glp_add_rows(prob, 1);
+        glp_set_row_bnds(prob, newRow, GLP_UP, 0, -1.0 * lBound);
+
+        MVOLP::stackMachine.push_back(
+            std::make_tuple(MVOLP::ROW, i, MVOLP::MULT, -1.0));
+
         for (int j = 1; j < len; j++) {
           val[j] *= -1.0;
+
+          MVOLP::stackMachine.push_back(
+              std::make_tuple(MVOLP::COL, ind[j], MVOLP::MULT, -1.0));
         }
 
-        glp_set_row_bnds(prob, newRow, GLP_UP, 0, -1.0 * lBound);
         glp_set_mat_row(prob, newRow, len, ind, val);
       }
     }
   }
+
+  /*
+   * ensure that the variable bounds are in standard form (x_n >= 0)
+   */
+  for (int i = 1; i <= cols; i++) {
+  }
 }
 
-void initProblem(std::string filename, MVOLP_FileType ft) {
+void initProblem(std::string filename, MVOLP::FileType ft) {
   printf("GLPK version: %s\n", glp_version());
 
   glp_prob *prob = glp_create_prob();
 
-  if (ft == MVOLP_LP) {
+  if (ft == MVOLP::LP) {
     if (glp_read_lp(prob, NULL, filename.c_str())) {
       // No need to throw an exception as error msg passing is done by GLPK
       std::exit(-1);
     }
   }
-  if (ft == MVOLP_MPS) {
+  if (ft == MVOLP::MPS) {
     if (glp_read_mps(prob, GLP_MPS_FILE, NULL, filename.c_str())) {
       std::exit(-1);
     }
@@ -105,20 +135,44 @@ void initProblem(std::string filename, MVOLP_FileType ft) {
   // Convert problem into standard Ax<=b form
   standard(prob);
 
-  if (glp_get_obj_dir(prob) == GLP_MIN) {
-    printf("Problem is minimization\n");
-  } else {
-    printf("Problem is maximization\n");
-  }
+  std::cout << "Problem contains " << glp_get_num_int(prob)
+            << " integer variables\n";
+  // if (glp_get_obj_dir(prob) == GLP_MIN) {
+  //   printf("Problem is minimization\n");
+  // } else {
+  //   printf("Problem is maximization\n");
+  // }
   int rows = glp_get_num_rows(prob);
   int cols = glp_get_num_cols(prob);
 
   Eigen::VectorXd objectiveVector(cols);
   Eigen::MatrixXd constraintMatrix(rows, cols);
   Eigen::VectorXd constraintVector(rows);
+  Eigen::VectorXd boundVector(cols);
 
+  std::cout << "Bounds: \n";
   for (int j = 1; j <= cols; j++) {
     objectiveVector.row(j - 1) << glp_get_obj_coef(prob, j);
+
+    //boundVector.row(j - 1) << 
+    int con_type = glp_get_col_type(prob, j);
+    double lb = glp_get_col_lb(prob, j);
+    double ub = glp_get_col_ub(prob, j);
+    if (con_type == GLP_LO) {
+      printf("x[%d] >= %f", j, lb);
+      // std::cout << "uh oh" << std::endl;
+    } else if (con_type == GLP_UP) {
+      printf("x[%d] <= %f",j , ub);
+    } else if (con_type == GLP_DB) {
+      printf("x[%d] <= %f, and x[%d] >= %f", j, lb, j, ub);
+      // std::cout << "uh oh" << std::endl;
+    } else if (con_type == GLP_FR) {
+      printf("x[%d]", j);
+    } else {
+      printf("x[%d] = %f", j, lb);
+      //std::cout << "uh oh" << std::endl;
+    }
+    printf("\n");
   }
 
   printf("Problem is %d x %d\n", rows, cols);
@@ -162,19 +216,22 @@ void initProblem(std::string filename, MVOLP_FileType ft) {
     if (con_type == GLP_LO) {
       // printf(" >= %f", lb);
       constraintVector.row(i - 1) << lb;
+      std::cout << "uh oh" << std::endl;
     } else if (con_type == GLP_UP) {
       // printf(" <= %f", ub);
       constraintVector.row(i - 1) << ub;
     } else if (con_type == GLP_DB) {
       // printf(" <= %f, and >= %f", lb, ub);
       constraintVector.row(i - 1) << lb;
+      std::cout << "uh oh" << std::endl;
     } else {
       // printf(" = %f", lb);
       constraintVector.row(i - 1) << lb;
-      std::cout << "uh huh" << std::endl;
+      std::cout << "uh oh" << std::endl;
     }
     // printf("\n");
   }
+
   std::cout << "b = \n" << constraintVector << std::endl;
   std::cout << "A = \n" << constraintMatrix << std::endl;
 }
@@ -200,14 +257,16 @@ int main(int argc, char **argv) {
     std::reverse(temp.begin(), temp.end());
 
     if (temp == ".lp") {
-      initProblem(fn, MVOLP_LP);
+      initProblem(fn, MVOLP::LP);
     } else if (temp == ".mps") {
-      initProblem(fn, MVOLP_MPS);
+      initProblem(fn, MVOLP::MPS);
     } else {
       std::cout << "Unrecognized filetype\n";
 
       return -1;
     }
+  } else {
+    std::cout << "see ./MVOLPS -h for usage\n";
   }
 
   return 0;
