@@ -1,11 +1,15 @@
 CC=g++
-CFLAGS=-lglpk -I.
-DEPS=tree.h
+CFLAGS=-lglpk -I. -Wall
+DEPS=tree.h util.h
+OBJ=2test.o tree.o util.o
 
-MVOLPS: 2test.cpp tree.cpp
-	$(CC) 2test.cpp $(CFLAGS) -o MVOLPS
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+MVOLPS: $(OBJ)
+	$(CC) -o $@ $^ $(CFLAGS)
 
 .PHONY: MVOLPS
 
 clean:
-	rm MVOLPS
+	rm -rf *.o
