@@ -1,7 +1,7 @@
 CC=g++
-CFLAGS=-lglpk -I. -Wall
-DEPS=tree.h util.h
-OBJ=2test.o tree.o util.o
+CFLAGS=-lglpk -I. -Wall --std=c++17
+DEPS=util.h tree.hh BranchAndBound.h
+OBJ=2test.o util.o BranchAndBound.o
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)

@@ -2,7 +2,6 @@
 #include "util.h"
 #include "eigen3/Eigen/Core"
 
-
 void standard(glp_prob *prob) {
   int rows = glp_get_num_rows(prob);
   int cols = glp_get_num_cols(prob);
@@ -113,7 +112,7 @@ void standard(glp_prob *prob) {
   }
 }
 
-void initProblem(std::string filename, MVOLP::FileType ft) {
+glp_prob *initProblem(std::string filename, MVOLP::FileType ft) {
   printf("GLPK version: %s\n", glp_version());
 
   glp_prob *prob = glp_create_prob();
@@ -233,5 +232,5 @@ void initProblem(std::string filename, MVOLP::FileType ft) {
   std::cout << "b = \n" << constraintVector << std::endl;
   std::cout << "A = \n" << constraintMatrix << std::endl;
 
-  glp_simplex(prob, NULL);
+  return prob;
 }

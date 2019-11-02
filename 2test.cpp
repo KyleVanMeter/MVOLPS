@@ -1,6 +1,7 @@
 #include "InputParser.h"
-#include "tree.h"
+#include "BranchAndBound.h"
 #include "util.h"
+#include "glpk.h"
 
 #include <algorithm>
 #include <iostream>
@@ -26,15 +27,19 @@ int main(int argc, char **argv) {
     temp = temp.substr(0, temp.find('.') + 1);
     std::reverse(temp.begin(), temp.end());
 
+    glp_prob *prob;
     if (temp == ".lp") {
-      initProblem(fn, MVOLP::LP);
+      prob = initProblem(fn, MVOLP::LP);
     } else if (temp == ".mps") {
-      initProblem(fn, MVOLP::MPS);
+      prob = initProblem(fn, MVOLP::MPS);
     } else {
       std::cout << "Unrecognized filetype\n";
 
       return -1;
     }
+
+    std::cout << branchAndBound(prob) << std::endl;
+
   } else {
     std::cout << "see ./MVOLPS -h for usage\n";
   }
