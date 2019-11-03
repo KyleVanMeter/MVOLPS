@@ -1,7 +1,8 @@
 CC=g++
-CFLAGS=-lglpk -I. -Wall --std=c++17
+CFLAGS=-lglpk -I. -Wall -std=c++14 -Wpedantic
 DEPS=util.h tree.hh BranchAndBound.h
 OBJ=2test.o util.o BranchAndBound.o
+RM=rm -f
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
@@ -12,4 +13,7 @@ MVOLPS: $(OBJ)
 .PHONY: MVOLPS
 
 clean:
-	rm -rf *.o
+	$(RM) $(OBJ)
+
+distclean:
+	$(RM) MVOLPS

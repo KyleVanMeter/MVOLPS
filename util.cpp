@@ -1,6 +1,26 @@
 #include <iostream>
 #include "util.h"
 #include "eigen3/Eigen/Core"
+//numeric_limits
+#include <limits>
+//static_assert
+#include <cassert>
+
+MVOLP::NodeData::NodeData(glp_prob *parent) {
+  static_assert(std::numeric_limits<double>::is_iec559,
+                "Platform does not support IEE 754 floating-point");
+
+  this->lowerBound = -std::numeric_limits<double>::infinity();
+  this->upperBound = std::numeric_limits<double>::infinity();
+  this->prob = glp_create_prob();
+  glp_copy_prob(this->prob, parent, GLP_ON);
+
+  this->inital = false;
+}
+
+MVOLP::NodeData::~NodeData() {
+  glp_delete_prob(this->prob);
+}
 
 void standard(glp_prob *prob) {
   int rows = glp_get_num_rows(prob);
