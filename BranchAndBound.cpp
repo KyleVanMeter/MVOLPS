@@ -16,6 +16,14 @@ int branchAndBound(glp_prob *prob) {
   // Solve initial relaxation
   glp_simplex(prob, NULL);
 
+  // If the relaxation has no solution then the IP problem will not have one too
+  int status = glp_get_status(prob);
+  if (status == GLP_NOFEAS || status == GLP_INFEAS) {
+    std::cout
+        << "Initial IP relaxation has no feasible solution.  Terminating\n";
+    return -1;
+  }
+
   // Print the non-zero values of the objective coefficients
   for (int i = 1; i <= cols; i++) {
     coef.at(i - 1) = glp_get_col_prim(prob, i);
@@ -31,7 +39,7 @@ int branchAndBound(glp_prob *prob) {
         // Store the column index of the violated variable
         violated.at(i - 1) = i;
         printer +=
-            "variable x[" + std::to_string(i) + "] integrality violated.\n";
+            "variable x[" + std::to_string(i) + "] integrality violated\n";
       }
     }
   }
@@ -39,8 +47,10 @@ int branchAndBound(glp_prob *prob) {
   std::cout << glp_get_obj_coef(prob, 0) << " = " << glp_get_obj_val(prob)
             << "\n";
 
+  // The vector is still 0 initialized iff no integrality constraints are
+  // violated
   if (std::accumulate(violated.begin(), violated.end(), 0) == 0) {
-    std::cout << "OPTIMAL IP FOUND: on initial relaxation";
+    std::cout << "OPTIMAL IP FOUND: on initial relaxation\n";
 
     return 0;
   }
