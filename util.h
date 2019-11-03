@@ -21,3 +21,5 @@ static std::vector<std::tuple<CondType, double, double>> constraintVector;
 void standard(glp_prob *prob);
 
 glp_prob *initProblem(std::string filename, MVOLP::FileType ft);
+
+double evalObj(std::vector<double> coef);
