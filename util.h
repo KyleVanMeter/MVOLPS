@@ -3,6 +3,8 @@
 #include <tuple>
 #include <vector>
 
+static int id = 1;
+
 namespace MVOLP {
 enum Operation { ADD = 1, MULT = 2 };
 enum RC { COL = 1, ROW = 2 };
@@ -19,6 +21,7 @@ public:
   // This field keeps track of whether or not the problem is the initial
   // relaxation
   bool inital;
+  int oid;
 
 private:
   NodeData(const glp_prob &other);

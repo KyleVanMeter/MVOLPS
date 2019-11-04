@@ -10,6 +10,8 @@ MVOLP::NodeData::NodeData(glp_prob *parent) {
   static_assert(std::numeric_limits<double>::is_iec559,
                 "Platform does not support IEE 754 floating-point");
 
+  this->oid = id;
+  id += 1;
   this->lowerBound = -std::numeric_limits<double>::infinity();
   this->upperBound = std::numeric_limits<double>::infinity();
   this->prob = glp_create_prob();
@@ -19,6 +21,7 @@ MVOLP::NodeData::NodeData(glp_prob *parent) {
 }
 
 MVOLP::NodeData::~NodeData() {
+  std::cout << "Destructor called on objectID: " << this->oid << std::endl;
   glp_delete_prob(this->prob);
 }
 
