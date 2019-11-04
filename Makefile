@@ -1,14 +1,15 @@
-CC=g++
-CFLAGS=-lglpk -I. -Wall -std=c++14 -Wpedantic
+CXX=g++
+CXXFLAGS=-lglpk -lspdlog -Wall -std=c++14 -Wpedantic
+HEADER=-I.
 DEPS=util.h tree.hh BranchAndBound.h
 OBJ=2test.o util.o BranchAndBound.o
 RM=rm -f
 
 %.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CXX) $(HEADER) $(CXXFLAGS) -c -o $@ $<
 
 MVOLPS: $(OBJ)
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CXX) $(HEADER) -o $@ $^ $(CXXFLAGS)
 
 .PHONY: MVOLPS
 
