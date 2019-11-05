@@ -1,10 +1,13 @@
-#include <iostream>
 #include "util.h"
 #include "eigen3/Eigen/Core"
+//debug
+#include "spdlog/spdlog.h"
+#include <iostream>
 //numeric_limits
 #include <limits>
 //static_assert
 #include <cassert>
+
 
 MVOLP::NodeData::NodeData(glp_prob *parent) {
   static_assert(std::numeric_limits<double>::is_iec559,
@@ -21,7 +24,7 @@ MVOLP::NodeData::NodeData(glp_prob *parent) {
 }
 
 MVOLP::NodeData::~NodeData() {
-  std::cout << "Destructor called on objectID: " << this->oid << std::endl;
+  spdlog::debug("Destructor called on objectID: " + std::to_string(this->oid) + "\n");
   glp_delete_prob(this->prob);
 }
 
