@@ -9,6 +9,8 @@
 // std::accumulate()
 #include <numeric>
 #include <queue>
+// std::map
+#include <map>
 // info and debug
 #include "spdlog/spdlog.h"
 
@@ -84,6 +86,8 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
 
 int branchAndBound(glp_prob *prob) {
   tree<int> subProblems;
+  // maps OID to iterator of that node
+  std::map<int, tree<int>::iterator> treeIndex;
 
   std::queue<std::shared_ptr<MVOLP::NodeData>> leafContainer;
   std::shared_ptr<MVOLP::NodeData> S1 = std::make_shared<MVOLP::NodeData>(prob);
@@ -91,7 +95,8 @@ int branchAndBound(glp_prob *prob) {
   leafContainer.push(S1);
 
   tree<int>::iterator root = subProblems.insert(subProblems.begin(), S1->oid);
-  subProblems.append_child(root, 123);
+  subProblems.append_child(root, S1->oid);
+  treeIndex[S1->oid] = subProblems.begin();
 
   glp_prob *a = glp_create_prob();
   double bestLower = -std::numeric_limits<double>::infinity();
@@ -100,9 +105,12 @@ int branchAndBound(glp_prob *prob) {
   int count = 0;
 
   while (!leafContainer.empty()) {
+    root = treeIndex[leafContainer.front().get()->oid];
     spdlog::debug("Current OID: " +
                   std::to_string(leafContainer.front().get()->oid));
     spdlog::debug("Container size: " + std::to_string(leafContainer.size()));
+    glp_erase_prob(a);
+    a = glp_create_prob();
     glp_copy_prob(a, leafContainer.front().get()->prob, GLP_OFF);
     glp_simplex(a, NULL);
     if (leafContainer.front().get()->inital) {
@@ -170,15 +178,19 @@ int branchAndBound(glp_prob *prob) {
       spdlog::info("Adding constraint " + std::to_string(floor(bound)) +
                    " >= " + "x[" + std::to_string(vars.front()) +
                    "] to object " + std::to_string(S2->oid) + "\n");
-      glp_set_col_bnds(S3->prob, vars.front(), GLP_LO, 0, ceil(bound));
+      glp_set_col_bnds(S3->prob, vars.front(), GLP_LO, ceil(bound), 0);
       spdlog::info("Adding constraint " + std::to_string(ceil(bound)) +
                    " <= " + "x[" + std::to_string(vars.front()) +
                    "] to object " + std::to_string(S3->oid) + "\n");
 
-      subProblems.append_child(subProblems.begin(), 1);
+      subProblems.append_child(root, S2->oid);
+      subProblems.append_child(root, S3->oid);
+      treeIndex[S2->oid] = ++root;
+      treeIndex[S3->oid] = ++root;
+
       leafContainer.push(S2);
       leafContainer.push(S3);
-      if (count > 10) {
+      if (count > 50) {
         spdlog::debug("Loop limit hit.  Returning early.");
         break;
       }
