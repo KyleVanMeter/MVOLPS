@@ -2,6 +2,7 @@
 #include "tree.hh"
 #include "tree_util.hh"
 #include "util.h"
+#include "tree_print.h"
 
 // std::trunc()
 #include <cmath>
@@ -64,7 +65,7 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
 
   // The vector is still 0 initialized iff no integrality constraints are
   // violated
-  //if (std::accumulate(violated.begin(), violated.end(), 0) == 0) {
+  // if (std::accumulate(violated.begin(), violated.end(), 0) == 0) {
   // FIXME update
   if (violated.empty()) {
     if (initial) {
@@ -82,13 +83,17 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
 }
 
 int branchAndBound(glp_prob *prob) {
-
   spdlog::set_level(spdlog::level::debug);
+
+  tree<int> subProblems;
 
   std::queue<std::shared_ptr<MVOLP::NodeData>> leafContainer;
   std::shared_ptr<MVOLP::NodeData> S1 = std::make_shared<MVOLP::NodeData>(prob);
   S1->inital = true;
   leafContainer.push(S1);
+
+  tree<int>::iterator root = subProblems.begin();
+  subProblems.insert(root, S1->oid);
 
   glp_prob *a = glp_create_prob();
   double bestLower = -std::numeric_limits<double>::infinity();
@@ -174,7 +179,7 @@ int branchAndBound(glp_prob *prob) {
 
       leafContainer.push(S2);
       leafContainer.push(S3);
-      if (count > 1000) {
+      if (count > 10) {
         spdlog::debug("Loop limit hit.  Returning early.");
         break;
       }
