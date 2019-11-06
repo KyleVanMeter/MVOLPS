@@ -83,8 +83,6 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
 }
 
 int branchAndBound(glp_prob *prob) {
-  spdlog::set_level(spdlog::level::debug);
-
   tree<int> subProblems;
 
   std::queue<std::shared_ptr<MVOLP::NodeData>> leafContainer;

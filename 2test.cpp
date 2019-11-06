@@ -2,6 +2,7 @@
 #include "BranchAndBound.h"
 #include "util.h"
 #include "glpk.h"
+#include "spdlog/spdlog.h"
 
 #include <algorithm>
 #include <iostream>
@@ -10,17 +11,33 @@
 int main(int argc, char **argv) {
   InputParser input(argc, argv);
 
-  if (input.CMDOptionExists("-h")) {
+  if (input.CMDOptionExists("-h") || input.CMDOptionExists("--help")) {
     std::cout << "Usage: MVOLPS [OPTION]\n"
               << "File input options:\n"
-              << "  -f [FILENAME.{mps|lp}]\n\n"
+              << "  -f/--file [FILENAME.{mps|lp}]\n\n"
+              << "Output verbosity options:\n"
+              << "  -s/--silent\n"
+              << "  -v/--verbose\n"
+              << "  -d/--debug\n\n"
               << "Help:\n"
-              << "  -h\n";
+              << "  -h/--help\n";
 
     return 0;
   }
 
-  if (input.CMDOptionExists("-f")) {
+  if (input.CMDOptionExists("-v") || input.CMDOptionExists("--verbose")) {
+    spdlog::set_level(spdlog::level::info);
+  }
+
+  if (input.CMDOptionExists("-d") || input.CMDOptionExists("--debug")) {
+    spdlog::set_level(spdlog::level::debug);
+  }
+
+  if (input.CMDOptionExists("-s") || input.CMDOptionExists("--silent")) {
+    spdlog::set_level(spdlog::level::off);
+  }
+
+  if (input.CMDOptionExists("-f") || input.CMDOptionExists("--file")) {
     std::string fn = input.getCMDOption("-f");
     std::string temp = fn;
     std::reverse(temp.begin(), temp.end());
