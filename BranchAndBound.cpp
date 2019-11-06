@@ -95,6 +95,8 @@ int branchAndBound(glp_prob *prob) {
   tree<int>::iterator root = subProblems.begin();
   subProblems.insert(root, S1->oid);
 
+  PrettyPrintTree(subProblems, subProblems.begin());
+
   glp_prob *a = glp_create_prob();
   double bestLower = -std::numeric_limits<double>::infinity();
   double bestUpper = std::numeric_limits<double>::infinity();
