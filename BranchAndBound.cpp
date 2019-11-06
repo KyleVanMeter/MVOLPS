@@ -1,15 +1,15 @@
 #include "BranchAndBound.h"
 #include "tree.hh"
+#include "tree_print.h"
 #include "tree_util.hh"
 #include "util.h"
-#include "tree_print.h"
 
 // std::trunc()
 #include <cmath>
 // std::accumulate()
 #include <numeric>
 #include <queue>
-
+// info and debug
 #include "spdlog/spdlog.h"
 
 /*
@@ -92,10 +92,8 @@ int branchAndBound(glp_prob *prob) {
   S1->inital = true;
   leafContainer.push(S1);
 
-  tree<int>::iterator root = subProblems.begin();
-  subProblems.insert(root, S1->oid);
-
-  PrettyPrintTree(subProblems, subProblems.begin());
+  tree<int>::iterator root = subProblems.insert(subProblems.begin(), S1->oid);
+  subProblems.append_child(root, 123);
 
   glp_prob *a = glp_create_prob();
   double bestLower = -std::numeric_limits<double>::infinity();
@@ -179,6 +177,7 @@ int branchAndBound(glp_prob *prob) {
                    " <= " + "x[" + std::to_string(vars.front()) +
                    "] to object " + std::to_string(S3->oid) + "\n");
 
+      subProblems.append_child(subProblems.begin(), 1);
       leafContainer.push(S2);
       leafContainer.push(S3);
       if (count > 10) {
@@ -189,6 +188,8 @@ int branchAndBound(glp_prob *prob) {
 
     count++;
   }
+
+  PrettyPrintTree(subProblems, subProblems.begin());
 
   return 0;
 }
