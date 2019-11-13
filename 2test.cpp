@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
       return -1;
     }
 
-    std::cout << branchAndBound(prob) << std::endl;
+    branchAndBound(prob);
 
   } else {
     std::cout << "see ./MVOLPS -h for usage\n";

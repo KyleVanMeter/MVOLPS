@@ -16,9 +16,11 @@
 
 /*
  * Utility function to report on problem progress.
- * Returns -1 for infeasible
+ * Returns pair int and vector<int> the int status is:
+ *        -1 for infeasible
  *         0 for normal
  *         1 for integer solution
+ * The vector contains the column index of the violated variables
  */
 std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
                                            bool initial = false) {
@@ -65,10 +67,7 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
              std::to_string(glp_get_obj_val(prob)) + "\n";
   spdlog::info(printMe);
 
-  // The vector is still 0 initialized iff no integrality constraints are
-  // violated
-  // if (std::accumulate(violated.begin(), violated.end(), 0) == 0) {
-  // FIXME update
+  // The variables vector is 0
   if (violated.empty()) {
     if (initial) {
       spdlog::info("OPTIMAL IP SOLUTION FOUND: on initial relaxation\n");
@@ -85,26 +84,31 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
 }
 
 int branchAndBound(glp_prob *prob) {
-  tree<int> subProblems;
+  tree<MVOLP::SPInfo> subProblems;
+  // tree<int> subProblems;
   // maps OID to iterator of that node
-  std::map<int, tree<int>::iterator> treeIndex;
+  std::map<int, tree<MVOLP::SPInfo>::iterator> treeIndex;
 
   std::queue<std::shared_ptr<MVOLP::NodeData>> leafContainer;
   std::shared_ptr<MVOLP::NodeData> S1 = std::make_shared<MVOLP::NodeData>(prob);
   S1->inital = true;
   leafContainer.push(S1);
 
-  tree<int>::iterator root = subProblems.insert(subProblems.begin(), S1->oid);
-  subProblems.append_child(root, S1->oid);
+  MVOLP::SPInfo in = {S1->oid, MVOLP::NONE};
+  tree<MVOLP::SPInfo>::iterator root =
+      subProblems.insert(subProblems.begin(), in);
+  subProblems.append_child(root, in);
   treeIndex[S1->oid] = subProblems.begin();
 
   glp_prob *a = glp_create_prob();
   double bestLower = -std::numeric_limits<double>::infinity();
   double bestUpper = std::numeric_limits<double>::infinity();
 
+  std::string solution = "";
   int count = 0;
 
   while (!leafContainer.empty()) {
+
     root = treeIndex[leafContainer.front().get()->oid];
     spdlog::debug("Current OID: " +
                   std::to_string(leafContainer.front().get()->oid));
@@ -113,6 +117,23 @@ int branchAndBound(glp_prob *prob) {
     a = glp_create_prob();
     glp_copy_prob(a, leafContainer.front().get()->prob, GLP_OFF);
     glp_simplex(a, NULL);
+
+    if (leafContainer.size() == 1) {
+      solution = "";
+      for (int i = 1; i <= glp_get_num_cols(a); i++) {
+        if (glp_get_col_prim(a, i) != 0 && glp_get_obj_coef(a, i) != 0) {
+          solution += std::to_string(glp_get_obj_coef(a, i)) + "*(x[" +
+                      std::to_string(i) +
+                      "] = " + std::to_string(glp_get_col_prim(a, i)) +
+                      ") + ";
+        }
+      }
+
+      // Constant (shift) term
+      solution += std::to_string(glp_get_obj_coef(a, 0)) + " = " +
+                  std::to_string(glp_get_obj_val(a)) + "\n";
+    }
+
     if (leafContainer.front().get()->inital) {
       std::pair<int, std::vector<int>> ret = printInfo(a, true);
       int status = ret.first;
@@ -131,6 +152,7 @@ int branchAndBound(glp_prob *prob) {
     if (status == 1) {
       // Prune by integrality
 
+      root.node->data.prune = MVOLP::INTG;
       spdlog::info("OID: " + std::to_string(leafContainer.front().get()->oid) +
                    ".  Pruning integral node.");
       leafContainer.front().get()->upperBound = glp_get_obj_val(a);
@@ -145,12 +167,16 @@ int branchAndBound(glp_prob *prob) {
       leafContainer.pop();
     } else if (status == -1) {
       // Prune infeasible non-initial sub-problems
+
+      root.node->data.prune = MVOLP::FEAS;
       spdlog::info("OID: " + std::to_string(leafContainer.front().get()->oid) +
                    ".  Pruning non-initial infeasible node");
       leafContainer.front().~shared_ptr();
       leafContainer.pop();
     } else if (glp_get_obj_val(a) <= bestLower) {
       // Prune if node is worse then best lower bound
+
+      root.node->data.prune = MVOLP::BNDS;
       spdlog::info("OID: " + std::to_string(leafContainer.front().get()->oid) +
                    ".  Pruning worse lower-bounded node");
       leafContainer.front().~shared_ptr();
@@ -183,14 +209,16 @@ int branchAndBound(glp_prob *prob) {
                    " <= " + "x[" + std::to_string(vars.front()) +
                    "] to object " + std::to_string(S3->oid) + "\n");
 
-      subProblems.append_child(root, S2->oid);
-      subProblems.append_child(root, S3->oid);
+      MVOLP::SPInfo sp = {S2->oid, MVOLP::NONE};
+      subProblems.append_child(root, sp);
+      sp = {S3->oid, MVOLP::NONE};
+      subProblems.append_child(root, sp);
       treeIndex[S2->oid] = ++root;
       treeIndex[S3->oid] = ++root;
 
       leafContainer.push(S2);
       leafContainer.push(S3);
-      if (count > 50) {
+      if (count > 100) {
         spdlog::debug("Loop limit hit.  Returning early.");
         break;
       }
@@ -199,7 +227,19 @@ int branchAndBound(glp_prob *prob) {
     count++;
   }
 
-  PrettyPrintTree(subProblems, subProblems.begin());
+  std::cout << "\nSolution is: " + solution + "\n";
+
+  PrettyPrintTree(subProblems, subProblems.begin(), [](MVOLP::SPInfo in) {
+    if (in.prune == MVOLP::INTG) {
+      return std::to_string(in.oid) + " I";
+    } else if (in.prune == MVOLP::FEAS) {
+      return std::to_string(in.oid) + " F";
+    } else if (in.prune == MVOLP::BNDS) {
+      return std::to_string(in.oid) + " B";
+    } else {
+      return std::to_string(in.oid);
+    }
+  });
 
   return 0;
 }
