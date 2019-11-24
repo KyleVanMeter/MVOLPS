@@ -118,22 +118,6 @@ int branchAndBound(glp_prob *prob) {
     glp_copy_prob(a, leafContainer.front().get()->prob, GLP_OFF);
     glp_simplex(a, NULL);
 
-    if (leafContainer.size() == 1) {
-      solution = "";
-      for (int i = 1; i <= glp_get_num_cols(a); i++) {
-        if (glp_get_col_prim(a, i) != 0 && glp_get_obj_coef(a, i) != 0) {
-          solution += std::to_string(glp_get_obj_coef(a, i)) + "*(x[" +
-                      std::to_string(i) +
-                      "] = " + std::to_string(glp_get_col_prim(a, i)) +
-                      ") + ";
-        }
-      }
-
-      // Constant (shift) term
-      solution += std::to_string(glp_get_obj_coef(a, 0)) + " = " +
-                  std::to_string(glp_get_obj_val(a)) + "\n";
-    }
-
     if (leafContainer.front().get()->inital) {
       std::pair<int, std::vector<int>> ret = printInfo(a, true);
       int status = ret.first;
@@ -161,6 +145,20 @@ int branchAndBound(glp_prob *prob) {
         spdlog::info(
             "OID: " + std::to_string(leafContainer.front().get()->oid) +
             ".  Updating best lower bound to " + std::to_string(bestLower));
+
+        solution = "";
+        for (int i = 1; i <= glp_get_num_cols(a); i++) {
+          if (glp_get_col_prim(a, i) != 0 && glp_get_obj_coef(a, i) != 0) {
+            solution += std::to_string(glp_get_obj_coef(a, i)) + "*(x[" +
+                        std::to_string(i) +
+                        "] = " + std::to_string(glp_get_col_prim(a, i)) +
+                        ") + ";
+          }
+        }
+
+        // Constant (shift) term
+        solution += std::to_string(glp_get_obj_coef(a, 0)) + " = " +
+                    std::to_string(glp_get_obj_val(a)) + "\n";
       }
 
       leafContainer.front().~shared_ptr();
