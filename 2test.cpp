@@ -35,6 +35,7 @@ int main(int argc, char **argv) {
 
   if (input.CMDOptionExists("-s") || input.CMDOptionExists("--silent")) {
     spdlog::set_level(spdlog::level::off);
+    glp_term_out(GLP_OFF);
   }
 
   if (input.CMDOptionExists("-f") || input.CMDOptionExists("--file")) {
