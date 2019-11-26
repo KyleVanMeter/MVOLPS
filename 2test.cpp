@@ -18,12 +18,15 @@ int main(int argc, char **argv) {
               << "Output verbosity options:\n"
               << "  -s/--silent\n"
               << "  -v/--verbose\n"
-              << "  -d/--debug\n\n"
+              << "  -d/--debug\n"
+              << "  -so/--solver-output\n\n"
               << "Help:\n"
               << "  -h/--help\n";
 
     return 0;
   }
+
+  glp_term_out(GLP_OFF);
 
   if (input.CMDOptionExists("-v") || input.CMDOptionExists("--verbose")) {
     spdlog::set_level(spdlog::level::info);
@@ -31,11 +34,16 @@ int main(int argc, char **argv) {
 
   if (input.CMDOptionExists("-d") || input.CMDOptionExists("--debug")) {
     spdlog::set_level(spdlog::level::debug);
+    glp_term_out(GLP_ON);
   }
 
   if (input.CMDOptionExists("-s") || input.CMDOptionExists("--silent")) {
     spdlog::set_level(spdlog::level::off);
-    glp_term_out(GLP_OFF);
+  }
+
+  if (input.CMDOptionExists("-so") ||
+      input.CMDOptionExists("--solver-output")) {
+    glp_term_out(GLP_ON);
   }
 
   if (input.CMDOptionExists("-f") || input.CMDOptionExists("--file")) {

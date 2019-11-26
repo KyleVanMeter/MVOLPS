@@ -1,13 +1,12 @@
 #include "util.h"
 #include "eigen3/Eigen/Core"
-//debug
+// debug
 #include "spdlog/spdlog.h"
 #include <iostream>
-//numeric_limits
+// numeric_limits
 #include <limits>
-//static_assert
+// static_assert
 #include <cassert>
-
 
 MVOLP::NodeData::NodeData(glp_prob *parent) {
   static_assert(std::numeric_limits<double>::is_iec559,
@@ -24,7 +23,7 @@ MVOLP::NodeData::NodeData(glp_prob *parent) {
 }
 
 MVOLP::NodeData::~NodeData() {
-  spdlog::debug("Destructor called on objectID: " + std::to_string(this->oid) + "\n");
+  spdlog::debug("Destructor called on objectID: " + std::to_string(this->oid));
   glp_delete_prob(this->prob);
 }
 
@@ -139,7 +138,8 @@ void standard(glp_prob *prob) {
 }
 
 glp_prob *initProblem(std::string filename, MVOLP::FileType ft) {
-  printf("GLPK version: %s\n", glp_version());
+  spdlog::info("GLPK version is " + std::string(glp_version()));
+  spdlog::info("Opening file: " + filename);
 
   glp_prob *prob = glp_create_prob();
 
@@ -158,8 +158,8 @@ glp_prob *initProblem(std::string filename, MVOLP::FileType ft) {
   // Convert problem into standard Ax<=b form
   // standard(prob);
 
-  std::cout << "Problem contains " << glp_get_num_int(prob)
-            << " integer variables\n";
+  spdlog::info(
+      sstr("Problem contains ", glp_get_num_int(prob), " integer variables"));
   // if (glp_get_obj_dir(prob) == GLP_MIN) {
   //   printf("Problem is minimization\n");
   // } else {
@@ -173,90 +173,107 @@ glp_prob *initProblem(std::string filename, MVOLP::FileType ft) {
   Eigen::VectorXd constraintVector(rows);
   Eigen::VectorXd boundVector(cols);
 
-  std::cout << "Bounds: \n";
-  for (int j = 1; j <= cols; j++) {
-    objectiveVector.row(j - 1) << glp_get_obj_coef(prob, j);
+  if (getGlpTerm() == GLP_ON) {
+    std::cout << "Bounds: \n";
+    for (int j = 1; j <= cols; j++) {
+      objectiveVector.row(j - 1) << glp_get_obj_coef(prob, j);
 
-    //boundVector.row(j - 1) <<
-    int con_type = glp_get_col_type(prob, j);
-    double lb = glp_get_col_lb(prob, j);
-    double ub = glp_get_col_ub(prob, j);
-    if (con_type == GLP_LO) {
-      printf("x[%d] >= %f", j, lb);
-      // std::cout << "uh oh" << std::endl;
-    } else if (con_type == GLP_UP) {
-      printf("x[%d] <= %f",j , ub);
-    } else if (con_type == GLP_DB) {
-      printf("x[%d] <= %f, and x[%d] >= %f", j, lb, j, ub);
-      // std::cout << "uh oh" << std::endl;
-    } else if (con_type == GLP_FR) {
-      printf("x[%d]", j);
-    } else {
-      printf("x[%d] = %f", j, lb);
-      //std::cout << "uh oh" << std::endl;
+      // boundVector.row(j - 1) <<
+      int con_type = glp_get_col_type(prob, j);
+      double lb = glp_get_col_lb(prob, j);
+      double ub = glp_get_col_ub(prob, j);
+      if (con_type == GLP_LO) {
+        printf("x[%d] >= %f", j, lb);
+        // std::cout << "uh oh" << std::endl;
+      } else if (con_type == GLP_UP) {
+        printf("x[%d] <= %f", j, ub);
+      } else if (con_type == GLP_DB) {
+        printf("x[%d] <= %f, and x[%d] >= %f", j, lb, j, ub);
+        // std::cout << "uh oh" << std::endl;
+      } else if (con_type == GLP_FR) {
+        printf("x[%d]", j);
+      } else {
+        printf("x[%d] = %f", j, lb);
+        // std::cout << "uh oh" << std::endl;
+      }
+      printf("\n");
     }
-    printf("\n");
   }
 
-  printf("Problem is %d x %d\n", rows, cols);
-  std::cout << "c^T = " << objectiveVector.transpose() << std::endl;
+  spdlog::info(sstr("Problem is ", rows, " x ", cols));
 
-  int num_non_zero[rows];
-  for (int i = 1; i <= rows; i++) {
-    int ind[cols];
-    double val[cols];
-    num_non_zero[i] = glp_get_mat_row(prob, i, ind, val);
+  if (getGlpTerm() == GLP_ON) {
+    std::cout << "c^T = " << objectiveVector.transpose() << std::endl;
 
-    /*
-     * At each step we search through the non-zero variables, and if they
-     * match our index we store them in the constraint matrix, otherwise we
-     * know that the variable is zero.
-     */
-    for (int j = 1; j <= cols; j++) {
-      bool change = false;
-      for (int k = 1; k <= num_non_zero[i]; k++) {
-        if (j == ind[k]) {
-          constraintMatrix.row(i - 1).col(j - 1) << val[k];
-          // printf(" %f ", val[k]);
-          change = true;
-          break;
+    int num_non_zero[rows];
+    for (int i = 1; i <= rows; i++) {
+      int ind[cols];
+      double val[cols];
+      num_non_zero[i] = glp_get_mat_row(prob, i, ind, val);
+
+      /*
+       * At each step we search through the non-zero variables, and if they
+       * match our index we store them in the constraint matrix, otherwise we
+       * know that the variable is zero.
+       */
+      for (int j = 1; j <= cols; j++) {
+        bool change = false;
+        for (int k = 1; k <= num_non_zero[i]; k++) {
+          if (j == ind[k]) {
+            constraintMatrix.row(i - 1).col(j - 1) << val[k];
+            // printf(" %f ", val[k]);
+            change = true;
+            break;
+          }
+        }
+        if (!change) {
+          constraintMatrix.row(i - 1).col(j - 1) << 0;
+          // printf(" 0 ");
         }
       }
-      if (!change) {
-        constraintMatrix.row(i - 1).col(j - 1) << 0;
-        // printf(" 0 ");
+
+      /*
+       * Most of this can be removed as we are already processing the problem to
+       * account for different types of constraints.  That is, con_type should
+       * only be GLP_UP
+       */
+      int con_type = glp_get_row_type(prob, i);
+      double lb = glp_get_row_lb(prob, i);
+      double ub = glp_get_row_ub(prob, i);
+      if (con_type == GLP_LO) {
+        // printf(" >= %f", lb);
+        constraintVector.row(i - 1) << lb;
+        // std::cout << "uh oh" << std::endl;
+      } else if (con_type == GLP_UP) {
+        // printf(" <= %f", ub);
+        constraintVector.row(i - 1) << ub;
+      } else if (con_type == GLP_DB) {
+        // printf(" <= %f, and >= %f", lb, ub);
+        constraintVector.row(i - 1) << lb;
+        // std::cout << "uh oh" << std::endl;
+      } else {
+        // printf(" = %f", lb);
+        constraintVector.row(i - 1) << lb;
+        // std::cout << "uh oh" << std::endl;
       }
+      // printf("\n");
     }
 
-    /*
-     * Most of this can be removed as we are already processing the problem to
-     * account for different types of constraints.  That is, con_type should
-     * only be GLP_UP
-     */
-    int con_type = glp_get_row_type(prob, i);
-    double lb = glp_get_row_lb(prob, i);
-    double ub = glp_get_row_ub(prob, i);
-    if (con_type == GLP_LO) {
-      // printf(" >= %f", lb);
-      constraintVector.row(i - 1) << lb;
-      // std::cout << "uh oh" << std::endl;
-    } else if (con_type == GLP_UP) {
-      // printf(" <= %f", ub);
-      constraintVector.row(i - 1) << ub;
-    } else if (con_type == GLP_DB) {
-      // printf(" <= %f, and >= %f", lb, ub);
-      constraintVector.row(i - 1) << lb;
-      // std::cout << "uh oh" << std::endl;
-    } else {
-      // printf(" = %f", lb);
-      constraintVector.row(i - 1) << lb;
-      // std::cout << "uh oh" << std::endl;
-    }
-    // printf("\n");
+    std::cout << "b = \n" << constraintVector << std::endl;
+    std::cout << "A = \n" << constraintMatrix << std::endl;
   }
 
-  std::cout << "b = \n" << constraintVector << std::endl;
-  std::cout << "A = \n" << constraintMatrix << std::endl;
-
   return prob;
+}
+
+/*
+ * GLPK does not have a way to get the terminal output flag, but it does return
+ * it when set so toggle the state, set it back to the original state, and
+ * return the flag
+ */
+int getGlpTerm() {
+  int flag = glp_term_out(GLP_ON);
+  glp_term_out(flag);
+
+  return flag;
 }

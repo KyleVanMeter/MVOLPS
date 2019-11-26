@@ -3,6 +3,11 @@
 #include <tuple>
 #include <vector>
 
+// std::ostringstream
+#include <sstream>
+// std::dec
+#include <iostream>
+
 static int id = 1;
 
 namespace MVOLP {
@@ -53,3 +58,14 @@ void standard(glp_prob *prob);
 glp_prob *initProblem(std::string filename, MVOLP::FileType ft);
 
 double evalObj(std::vector<double> coef);
+
+int getGlpTerm();
+
+// Template to convert any number of things to std::string
+// Use like: sstr("thing," 1, etc)
+template < typename... Args >
+std::string sstr( Args &&... args ) {
+  std::ostringstream sstr;
+  ( sstr << std::dec << ... << args );
+  return sstr.str();
+}

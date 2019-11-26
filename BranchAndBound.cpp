@@ -35,7 +35,7 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
   if (status == GLP_NOFEAS || status == GLP_INFEAS || status == GLP_UNBND) {
     if (initial) {
       spdlog::info(
-          "Initial LP relaxation has no feasible solution.  Terminating\n");
+          "Initial LP relaxation has no feasible solution.  Terminating");
     }
 
     return std::make_pair(-1, violated);
@@ -56,23 +56,22 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
         // Store the column index of the violated variable
         // violated.at(i - 1) = i;
         violated.push_back(i);
-        printer +=
-            "variable x[" + std::to_string(i) + "] integrality violated\n";
+        printer += "variable x[" + std::to_string(i) + "] integrality violated";
       }
     }
   }
 
   // Constant (shift) term
   printMe += std::to_string(glp_get_obj_coef(prob, 0)) + " = " +
-             std::to_string(glp_get_obj_val(prob)) + "\n";
+             std::to_string(glp_get_obj_val(prob));
   spdlog::info(printMe);
 
   // The variables vector is 0
   if (violated.empty()) {
     if (initial) {
-      spdlog::info("OPTIMAL IP SOLUTION FOUND: on initial relaxation\n");
+      spdlog::info("OPTIMAL IP SOLUTION FOUND: on initial relaxation");
     } else {
-      spdlog::info("IP SOLUTION FOUND\n");
+      spdlog::info("IP SOLUTION FOUND");
     }
 
     return std::make_pair(1, violated);
@@ -201,11 +200,11 @@ int branchAndBound(glp_prob *prob) {
       glp_set_col_bnds(S2->prob, vars.front(), GLP_UP, 0, floor(bound));
       spdlog::info("Adding constraint " + std::to_string(floor(bound)) +
                    " >= " + "x[" + std::to_string(vars.front()) +
-                   "] to object " + std::to_string(S2->oid) + "\n");
+                   "] to object " + std::to_string(S2->oid));
       glp_set_col_bnds(S3->prob, vars.front(), GLP_LO, ceil(bound), 0);
       spdlog::info("Adding constraint " + std::to_string(ceil(bound)) +
                    " <= " + "x[" + std::to_string(vars.front()) +
-                   "] to object " + std::to_string(S3->oid) + "\n");
+                   "] to object " + std::to_string(S3->oid));
 
       MVOLP::SPInfo sp = {S2->oid, MVOLP::NONE};
       subProblems.append_child(root, sp);
@@ -216,9 +215,9 @@ int branchAndBound(glp_prob *prob) {
 
       leafContainer.push(S2);
       leafContainer.push(S3);
-      if (count > 100) {
-        spdlog::debug("Loop limit hit.  Returning early.");
-        break;
+      if (count > 800000) {
+        spdlog::error("Loop limit hit.  Returning early.");
+        std::exit(-1);
       }
     }
 
@@ -227,7 +226,7 @@ int branchAndBound(glp_prob *prob) {
 
   std::cout << "\nSolution is: " + solution + "\n";
 
-  PrettyPrintTree(subProblems, subProblems.begin(), [](MVOLP::SPInfo in) {
+  PrettyPrintTree(subProblems, subProblems.begin(), [](MVOLP::SPInfo &in) {
     if (in.prune == MVOLP::INTG) {
       return std::to_string(in.oid) + " I";
     } else if (in.prune == MVOLP::FEAS) {
