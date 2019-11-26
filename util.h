@@ -57,15 +57,16 @@ void standard(glp_prob *prob);
 
 glp_prob *initProblem(std::string filename, MVOLP::FileType ft);
 
+std::pair<int, std::vector<int>> printInfo(glp_prob *prob, bool initial);
+
 double evalObj(std::vector<double> coef);
 
 int getGlpTerm();
 
 // Template to convert any number of things to std::string
 // Use like: sstr("thing," 1, etc)
-template < typename... Args >
-std::string sstr( Args &&... args ) {
+template <typename... Args> std::string sstr(Args &&... args) {
   std::ostringstream sstr;
-  ( sstr << std::dec << ... << args );
+  (sstr << std::dec << ... << args);
   return sstr.str();
 }

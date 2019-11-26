@@ -14,74 +14,6 @@
 // info and debug
 #include "spdlog/spdlog.h"
 
-/*
- * Utility function to report on problem progress.
- * Returns pair int and vector<int> the int status is:
- *        -1 for infeasible
- *         0 for normal
- *         1 for integer solution
- * The vector contains the column index of the violated variables
- */
-std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
-                                           bool initial = false) {
-  int cols = glp_get_num_cols(prob);
-  std::string printer("");
-  std::vector<double> coef(cols);
-  std::vector<int> violated;
-
-  // If the initial relaxation has no solution then the IP problem will not
-  // have one too
-  int status = glp_get_status(prob);
-  if (status == GLP_NOFEAS || status == GLP_INFEAS || status == GLP_UNBND) {
-    if (initial) {
-      spdlog::info(
-          "Initial LP relaxation has no feasible solution.  Terminating");
-    }
-
-    return std::make_pair(-1, violated);
-  }
-
-  // Print the non-zero values of the objective coefficients
-  std::string printMe = "";
-  for (int i = 1; i <= cols; i++) {
-    coef.at(i - 1) = glp_get_col_prim(prob, i);
-    if (coef.at(i - 1) != 0 && glp_get_obj_coef(prob, i) != 0) {
-      printMe += std::to_string(glp_get_obj_coef(prob, i)) + "*(x[" +
-                 std::to_string(i) + "] = " + std::to_string(coef.at(i - 1)) +
-                 ") + ";
-
-      // If our coefficient is fractional and not continuous
-      if (std::trunc(coef.at(i - 1)) != coef.at(i - 1) &&
-          glp_get_col_kind(prob, i) != GLP_CV) {
-        // Store the column index of the violated variable
-        // violated.at(i - 1) = i;
-        violated.push_back(i);
-        printer += "variable x[" + std::to_string(i) + "] integrality violated";
-      }
-    }
-  }
-
-  // Constant (shift) term
-  printMe += std::to_string(glp_get_obj_coef(prob, 0)) + " = " +
-             std::to_string(glp_get_obj_val(prob));
-  spdlog::info(printMe);
-
-  // The variables vector is 0
-  if (violated.empty()) {
-    if (initial) {
-      spdlog::info("OPTIMAL IP SOLUTION FOUND: on initial relaxation");
-    } else {
-      spdlog::info("IP SOLUTION FOUND");
-    }
-
-    return std::make_pair(1, violated);
-  }
-
-  spdlog::info(printer);
-
-  return std::make_pair(0, violated);
-}
-
 int branchAndBound(glp_prob *prob) {
   tree<MVOLP::SPInfo> subProblems;
   // tree<int> subProblems;
@@ -215,7 +147,7 @@ int branchAndBound(glp_prob *prob) {
 
       leafContainer.push(S2);
       leafContainer.push(S3);
-      if (count > 800000) {
+      if (count > 200000) {
         spdlog::error("Loop limit hit.  Returning early.");
         std::exit(-1);
       }
