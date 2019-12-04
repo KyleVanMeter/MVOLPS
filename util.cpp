@@ -151,16 +151,37 @@ void standard(glp_prob *prob) {
   }
 }
 
+std::shared_ptr<MVOLP::NodeData> MVOLP::ParameterObj::pickNode(
+    const std::queue<std::shared_ptr<MVOLP::NodeData>> &problems) {
+  // FIFO node selection
+  if (_nodeStrat == MVOLP::param::NodeStratType::DFS) {
+    return problems.front();
+  }
+
+  // Priority queue node selection (sorted by upper bound)
+  if (_nodeStrat == MVOLP::param::NodeStratType::BEST) {
+    auto cmp = [](const std::shared_ptr<MVOLP::NodeData> &lhs,
+                  const std::shared_ptr<MVOLP::NodeData> &rhs) -> bool {
+      return lhs->upperBound < rhs->upperBound;
+    };
+    std::priority_queue<std::shared_ptr<MVOLP::NodeData>,
+                        std::deque<std::shared_ptr<MVOLP::NodeData>>,
+                        decltype(cmp)>
+        pQueue(cmp);
+
+    return pQueue.top();
+  }
+}
+
 int MVOLP::ParameterObj::pickVar(const std::vector<int> &vars) {
   // Terrible default
-  if (_varStrat == 0) {
-    std::cout << "where??? " << vars.front() << "\n";
+  if (_varStrat == MVOLP::param::VarStratType::VO) {
+    spdlog::debug(sstr("Picked var x[", vars.front(), "] (Front of queue)"));
     return vars.front();
   }
   // Closest to 0.5
-  if (_varStrat == 1) {
+  if (_varStrat == MVOLP::param::VarStratType::VFP) {
     double cur;
-    std::cout << "where??? " << vars.front() << "\n";
     double curBest =
         std::abs(getFract(glp_get_col_prim(_prob, vars.front())) - 0.5);
     int index = vars.front();
@@ -172,11 +193,11 @@ int MVOLP::ParameterObj::pickVar(const std::vector<int> &vars) {
       }
     }
 
+    spdlog::debug(sstr("Picked var x[", index, "] (fractional part closest to 0.5)"));
     return index;
   }
   // Greatest impact on objective function
-  if (_varStrat == 2) {
-    std::cout << "where??? " << vars.front() << "\n";
+  if (_varStrat == MVOLP::param::VarStratType::VGO) {
     double bestCoef = 0.0;
     double cur;
     int index;
@@ -188,6 +209,7 @@ int MVOLP::ParameterObj::pickVar(const std::vector<int> &vars) {
       }
     }
 
+    spdlog::debug(sstr("Picked var x[", index, "] (Greatest obj. impact)"));
     return index;
   }
 }
