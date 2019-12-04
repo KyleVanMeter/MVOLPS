@@ -41,8 +41,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
   while (!leafContainer.empty()) {
     std::shared_ptr<MVOLP::NodeData> node = params.pickNode(leafContainer);
     root = treeIndex[node.get()->oid];
-    spdlog::debug("Current OID: " +
-                  std::to_string(node.get()->oid));
+    spdlog::debug("Current OID: " + std::to_string(node.get()->oid));
     spdlog::debug("Container size: " + std::to_string(leafContainer.size()));
     glp_erase_prob(a);
     a = glp_create_prob();
@@ -73,9 +72,9 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
       node.get()->upperBound = glp_get_obj_val(a);
       if (node.get()->upperBound > bestLower) {
         bestLower = node.get()->upperBound;
-        spdlog::info(
-            "OID: " + std::to_string(node.get()->oid) +
-            ".  Updating best lower bound to " + std::to_string(bestLower));
+        spdlog::info("OID: " + std::to_string(node.get()->oid) +
+                     ".  Updating best lower bound to " +
+                     std::to_string(bestLower));
 
         solution = "";
         for (int i = 1; i <= glp_get_num_cols(a); i++) {
@@ -128,12 +127,12 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
           std::make_shared<MVOLP::NodeData>(a);
       glp_set_col_bnds(S2->prob, pick, GLP_UP, 0, floor(bound));
       spdlog::info("Adding constraint " + std::to_string(floor(bound)) +
-                   " >= " + "x[" + std::to_string(pick) +
-                   "] to object " + std::to_string(S2->oid));
+                   " >= " + "x[" + std::to_string(pick) + "] to object " +
+                   std::to_string(S2->oid));
       glp_set_col_bnds(S3->prob, pick, GLP_LO, ceil(bound), 0);
       spdlog::info("Adding constraint " + std::to_string(ceil(bound)) +
-                   " <= " + "x[" + std::to_string(pick) +
-                   "] to object " + std::to_string(S3->oid));
+                   " <= " + "x[" + std::to_string(pick) + "] to object " +
+                   std::to_string(S3->oid));
 
       MVOLP::SPInfo sp = {S2->oid, MVOLP::NONE};
       subProblems.append_child(root, sp);
