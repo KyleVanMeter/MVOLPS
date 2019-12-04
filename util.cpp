@@ -8,6 +8,20 @@
 // static_assert
 #include <cassert>
 
+double getFract(double x) {
+  double fractPart, intPart;
+
+  fractPart = modf(x, &intPart);
+  if (fractPart < 0.0) {
+    // Our fractional component for a negative coefficient should be
+    // 1-f, but since modf returns a negative number for negative input
+    // we just do 1+f
+    fractPart += 1;
+  }
+
+  return fractPart;
+}
+
 MVOLP::NodeData::NodeData(glp_prob *parent) {
   static_assert(std::numeric_limits<double>::is_iec559,
                 "Platform does not support IEE 754 floating-point");
@@ -135,6 +149,66 @@ void standard(glp_prob *prob) {
       }
     }
   }
+}
+
+int MVOLP::ParameterObj::pickVar(const std::vector<int> &vars) {
+  // Terrible default
+  if (_varStrat == 0) {
+    std::cout << "where??? " << vars.front() << "\n";
+    return vars.front();
+  }
+  // Closest to 0.5
+  if (_varStrat == 1) {
+    double cur;
+    std::cout << "where??? " << vars.front() << "\n";
+    double curBest =
+        std::abs(getFract(glp_get_col_prim(_prob, vars.front())) - 0.5);
+    int index = vars.front();
+    for (auto &i : vars) {
+      cur = std::abs(getFract(glp_get_col_prim(_prob, i)) - 0.5);
+      if (cur < curBest) {
+        curBest = cur;
+        index = i;
+      }
+    }
+
+    return index;
+  }
+  // Greatest impact on objective function
+  if (_varStrat == 2) {
+    std::cout << "where??? " << vars.front() << "\n";
+    double bestCoef = 0.0;
+    double cur;
+    int index;
+    for (auto &i : vars) {
+      cur = glp_get_obj_coef(_prob, i);
+      if (cur > bestCoef) {
+        bestCoef = cur;
+        index = i;
+      }
+    }
+
+    return index;
+  }
+}
+
+void MVOLP::ParameterObj::setVarStrat(const param::VarStratType a) {
+  _varStrat = a;
+}
+
+void MVOLP::ParameterObj::setNodeStrat(const param::NodeStratType a) {
+  _nodeStrat = a;
+}
+
+void MVOLP::ParameterObj::setStrategy(const param::VarStratType varStrat,
+                                      const param::NodeStratType nodeStrat) {
+  _varStrat = varStrat;
+  _nodeStrat = nodeStrat;
+}
+
+std::pair<MVOLP::param::VarStratType, MVOLP::param::NodeStratType>
+MVOLP::ParameterObj::getStrategy() {
+  return std::make_pair(_varStrat, _nodeStrat);
 }
 
 glp_prob *initProblem(std::string filename, MVOLP::FileType ft) {

@@ -1,5 +1,9 @@
+#ifndef UTIL_H
+#define UTIL_H
 #include "glpk.h"
 
+#include <memory>
+#include <queue>
 #include <tuple>
 #include <vector>
 
@@ -18,6 +22,12 @@ enum FileType { LP = 1, MPS = 2 };
 enum CondType { FR = 0, LO = 1, UP = 2, DB = 3, FX = 4 };
 // Prune by integrality, (in)feasibility, worse bound, or none
 enum PruneType { INTG = 0, FEAS = 1, BNDS = 3, NONE };
+
+namespace param {
+enum VarStratType { VO = 0, VFP = 1, VGO = 2 };
+enum NodeStratType { DFS = 0, BEST = 1 };
+} // namespace param
+
 class NodeData {
 public:
   NodeData(glp_prob *parent);
@@ -44,6 +54,30 @@ struct SPInfo {
   PruneType prune;
 };
 
+class ParameterObj {
+public:
+  ParameterObj() = delete;
+  ParameterObj(glp_prob *prob)
+      : _varStrat(param::VarStratType::VO),
+        _nodeStrat(param::NodeStratType::DFS) {
+    _prob = prob;
+  }
+
+  int pickVar(const std::vector<int> &vars);
+  std::shared_ptr<MVOLP::NodeData>
+  pickNode(const std::queue<std::shared_ptr<MVOLP::NodeData>> &problems);
+
+  void setStrategy(const param::VarStratType a, const param::NodeStratType b);
+  void setVarStrat(const param::VarStratType a);
+  void setNodeStrat(const param::NodeStratType a);
+  std::pair<param::VarStratType, param::NodeStratType> getStrategy();
+
+private:
+  param::VarStratType _varStrat;
+  param::NodeStratType _nodeStrat;
+  glp_prob *_prob;
+};
+
 // This keeps track of which row, or column we make a change to when
 // standardizing so we can reconstruct the solution to the original problem
 static std::vector<std::tuple<RC, int, Operation, double>> stackMachine;
@@ -52,6 +86,8 @@ static std::vector<std::tuple<RC, int, Operation, double>> stackMachine;
 // of the constraint type along with the constraint value
 static std::vector<std::tuple<CondType, double, double>> constraintVector;
 } // namespace MVOLP
+
+double getFract(double x);
 
 void standard(glp_prob *prob);
 
@@ -70,3 +106,4 @@ template <typename... Args> std::string sstr(Args &&... args) {
   (sstr << std::dec << ... << args);
   return sstr.str();
 }
+#endif

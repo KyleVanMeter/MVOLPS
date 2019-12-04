@@ -14,7 +14,7 @@
 // info and debug
 #include "spdlog/spdlog.h"
 
-int branchAndBound(glp_prob *prob) {
+int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
   tree<MVOLP::SPInfo> subProblems;
   // tree<int> subProblems;
   // maps OID to iterator of that node
@@ -116,7 +116,8 @@ int branchAndBound(glp_prob *prob) {
       leafContainer.pop();
       spdlog::debug("Queue size is " + std::to_string(leafContainer.size()));
 
-      double bound = glp_get_col_prim(a, vars[0]);
+      int pick = params.pickVar(vars);
+      double bound = glp_get_col_prim(a, pick);
 
       std::string printMe = "Violated variables are: ";
       for (auto i : vars) {
@@ -129,13 +130,13 @@ int branchAndBound(glp_prob *prob) {
 
       std::shared_ptr<MVOLP::NodeData> S3 =
           std::make_shared<MVOLP::NodeData>(a);
-      glp_set_col_bnds(S2->prob, vars.front(), GLP_UP, 0, floor(bound));
+      glp_set_col_bnds(S2->prob, pick, GLP_UP, 0, floor(bound));
       spdlog::info("Adding constraint " + std::to_string(floor(bound)) +
-                   " >= " + "x[" + std::to_string(vars.front()) +
+                   " >= " + "x[" + std::to_string(pick) +
                    "] to object " + std::to_string(S2->oid));
-      glp_set_col_bnds(S3->prob, vars.front(), GLP_LO, ceil(bound), 0);
+      glp_set_col_bnds(S3->prob, pick, GLP_LO, ceil(bound), 0);
       spdlog::info("Adding constraint " + std::to_string(ceil(bound)) +
-                   " <= " + "x[" + std::to_string(vars.front()) +
+                   " <= " + "x[" + std::to_string(pick) +
                    "] to object " + std::to_string(S3->oid));
 
       MVOLP::SPInfo sp = {S2->oid, MVOLP::NONE};

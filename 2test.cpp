@@ -1,8 +1,8 @@
-#include "InputParser.h"
 #include "BranchAndBound.h"
-#include "util.h"
+#include "InputParser.h"
 #include "glpk.h"
 #include "spdlog/spdlog.h"
+#include "util.h"
 
 #include <algorithm>
 #include <iostream>
@@ -20,6 +20,14 @@ int main(int argc, char **argv) {
               << "  -v/--verbose\n"
               << "  -d/--debug\n"
               << "  -so/--solver-output\n\n"
+              << "Algorithm strategy options:\n"
+              << "  -vs [{0|1|2}]\n"
+              << "    0. vars are picked on order\n"
+              << "    1. vars are picked on fractional part closeness to 0.5\n"
+              << "    2. vars are picked on greatest impact on obj. function\n"
+              << "  -bs [{0|1}]\n"
+              << "    0. nodes are picked for DFS (FIFO/queue)\n"
+              << "    1. nodes are picked for best-FS (greatest z-value)\n"
               << "Help:\n"
               << "  -h/--help\n";
 
@@ -64,7 +72,39 @@ int main(int argc, char **argv) {
       return -1;
     }
 
-    branchAndBound(prob);
+    MVOLP::ParameterObj params(prob);
+
+    if (input.CMDOptionExists("-bs")) {
+      std::string option = input.getCMDOption("-bs");
+      int opt = std::stoi(option);
+
+      if (opt == MVOLP::param::NodeStratType::BEST) {
+        params.setNodeStrat(MVOLP::param::NodeStratType::BEST);
+      } else if (opt == MVOLP::param::NodeStratType::DFS) {
+        params.setNodeStrat(MVOLP::param::NodeStratType::DFS);
+      } else {
+        spdlog::error("Unknown parameter value for -bs");
+        return -1;
+      }
+    }
+
+    if (input.CMDOptionExists("-vs")) {
+      std::string option = input.getCMDOption("-vs");
+      int opt = std::stoi(option);
+
+      if (opt == MVOLP::param::VarStratType::VFP) {
+        params.setVarStrat(MVOLP::param::VarStratType::VFP);
+      } else if (opt == MVOLP::param::VarStratType::VGO) {
+        params.setVarStrat(MVOLP::param::VarStratType::VGO);
+      } else if (opt == MVOLP::param::VarStratType::VO) {
+        params.setVarStrat(MVOLP::param::VarStratType::VO);
+      } else {
+        spdlog::error("Unknown parameter value for -vs");
+        return -1;
+      }
+    }
+
+    branchAndBound(prob, params);
 
   } else {
     std::cout << "see ./MVOLPS -h for usage\n";
