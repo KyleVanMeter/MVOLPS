@@ -152,9 +152,15 @@ void standard(glp_prob *prob) {
 }
 
 std::shared_ptr<MVOLP::NodeData> MVOLP::ParameterObj::pickNode(
-    const std::queue<std::shared_ptr<MVOLP::NodeData>> &problems) {
+    const std::deque<std::shared_ptr<MVOLP::NodeData>> &problems) {
   // FIFO node selection
   if (_nodeStrat == MVOLP::param::NodeStratType::DFS) {
+    std::string printMe = "";
+    for (auto &i : problems) {
+      printMe += std::to_string(i->upperBound) + " ";
+    }
+    spdlog::debug(
+        sstr("Picked ", problems.front()->upperBound, " from " + printMe));
     return problems.front();
   }
 
@@ -162,12 +168,21 @@ std::shared_ptr<MVOLP::NodeData> MVOLP::ParameterObj::pickNode(
   if (_nodeStrat == MVOLP::param::NodeStratType::BEST) {
     auto cmp = [](const std::shared_ptr<MVOLP::NodeData> &lhs,
                   const std::shared_ptr<MVOLP::NodeData> &rhs) -> bool {
-      return lhs->upperBound < rhs->upperBound;
+      return lhs->upperBound > rhs->upperBound;
     };
     std::priority_queue<std::shared_ptr<MVOLP::NodeData>,
                         std::deque<std::shared_ptr<MVOLP::NodeData>>,
                         decltype(cmp)>
         pQueue(cmp);
+    // std::sort(problems.begin(), problems.end(), cmp);
+
+    std::string printMe = "";
+    for (auto &i : problems) {
+      pQueue.push(i);
+      printMe += std::to_string(i->upperBound) + " ";
+    }
+    spdlog::debug(
+        sstr("Picked ", pQueue.top()->upperBound, " from " + printMe));
 
     return pQueue.top();
   }
@@ -193,7 +208,8 @@ int MVOLP::ParameterObj::pickVar(const std::vector<int> &vars) {
       }
     }
 
-    spdlog::debug(sstr("Picked var x[", index, "] (fractional part closest to 0.5)"));
+    spdlog::debug(
+        sstr("Picked var x[", index, "] (fractional part closest to 0.5)"));
     return index;
   }
   // Greatest impact on objective function

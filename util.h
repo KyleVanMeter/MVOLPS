@@ -65,7 +65,7 @@ public:
 
   int pickVar(const std::vector<int> &vars);
   std::shared_ptr<MVOLP::NodeData>
-  pickNode(const std::queue<std::shared_ptr<MVOLP::NodeData>> &problems);
+  pickNode(const std::deque<std::shared_ptr<MVOLP::NodeData>> &problems);
 
   void setStrategy(const param::VarStratType a, const param::NodeStratType b);
   void setVarStrat(const param::VarStratType a);

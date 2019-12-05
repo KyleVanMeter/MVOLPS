@@ -20,10 +20,10 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
   // maps OID to iterator of that node
   std::map<int, tree<MVOLP::SPInfo>::iterator> treeIndex;
 
-  std::queue<std::shared_ptr<MVOLP::NodeData>> leafContainer;
+  std::deque<std::shared_ptr<MVOLP::NodeData>> leafContainer;
   std::shared_ptr<MVOLP::NodeData> S1 = std::make_shared<MVOLP::NodeData>(prob);
   S1->inital = true;
-  leafContainer.push(S1);
+  leafContainer.push_back(S1);
 
   MVOLP::SPInfo in = {S1->oid, MVOLP::NONE};
   tree<MVOLP::SPInfo>::iterator root =
@@ -61,7 +61,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
     int status = ret.first;
     std::vector<int> vars = ret.second;
 
-    node.get()->upperBound = glp_get_obj_val(a);
+    node->upperBound = glp_get_obj_val(a);
 
     if (status == 1) {
       // Prune by integrality
@@ -91,24 +91,24 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
                     std::to_string(glp_get_obj_val(a)) + "\n";
       }
 
-      leafContainer.pop();
+      leafContainer.pop_front();
     } else if (status == -1) {
       // Prune infeasible non-initial sub-problems
 
       root.node->data.prune = MVOLP::FEAS;
       spdlog::info("OID: " + std::to_string(node.get()->oid) +
                    ".  Pruning non-initial infeasible node");
-      leafContainer.pop();
+      leafContainer.pop_front();
     } else if (glp_get_obj_val(a) <= bestLower) {
       // Prune if node is worse then best lower bound
 
       root.node->data.prune = MVOLP::BNDS;
       spdlog::info("OID: " + std::to_string(node.get()->oid) +
                    ".  Pruning worse lower-bounded node");
-      leafContainer.pop();
+      leafContainer.pop_front();
     } else {
       spdlog::debug("Queue size is " + std::to_string(leafContainer.size()));
-      leafContainer.pop();
+      leafContainer.pop_front();
       spdlog::debug("Queue size is " + std::to_string(leafContainer.size()));
 
       int pick = params.pickVar(vars);
@@ -129,10 +129,15 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
       spdlog::info("Adding constraint " + std::to_string(floor(bound)) +
                    " >= " + "x[" + std::to_string(pick) + "] to object " +
                    std::to_string(S2->oid));
+      glp_simplex(S2->prob, NULL);
+      S2->upperBound = glp_get_obj_val(S2->prob);
+
       glp_set_col_bnds(S3->prob, pick, GLP_LO, ceil(bound), 0);
       spdlog::info("Adding constraint " + std::to_string(ceil(bound)) +
                    " <= " + "x[" + std::to_string(pick) + "] to object " +
                    std::to_string(S3->oid));
+      glp_simplex(S3->prob, NULL);
+      S3->upperBound = glp_get_obj_val(S3->prob);
 
       MVOLP::SPInfo sp = {S2->oid, MVOLP::NONE};
       subProblems.append_child(root, sp);
@@ -141,8 +146,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
       treeIndex[S2->oid] = ++root;
       treeIndex[S3->oid] = ++root;
 
-      leafContainer.push(S2);
-      leafContainer.push(S3);
+      leafContainer.push_back(S2);
+      leafContainer.push_back(S3);
       if (count > 200000) {
         spdlog::error("Loop limit hit.  Returning early.");
         std::exit(-1);
