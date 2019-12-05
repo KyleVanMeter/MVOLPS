@@ -168,23 +168,20 @@ std::shared_ptr<MVOLP::NodeData> MVOLP::ParameterObj::pickNode(
   if (_nodeStrat == MVOLP::param::NodeStratType::BEST) {
     auto cmp = [](const std::shared_ptr<MVOLP::NodeData> &lhs,
                   const std::shared_ptr<MVOLP::NodeData> &rhs) -> bool {
-      return lhs->upperBound > rhs->upperBound;
+      return lhs->upperBound < rhs->upperBound;
     };
-    std::priority_queue<std::shared_ptr<MVOLP::NodeData>,
-                        std::deque<std::shared_ptr<MVOLP::NodeData>>,
-                        decltype(cmp)>
-        pQueue(cmp);
-    // std::sort(problems.begin(), problems.end(), cmp);
+
+    auto i = std::max_element(std::begin(problems), std::end(problems), cmp);
+    std::shared_ptr<MVOLP::NodeData> pick =
+        problems.at(std::distance(std::begin(problems), i));
 
     std::string printMe = "";
-    for (auto &i : problems) {
-      pQueue.push(i);
-      printMe += std::to_string(i->upperBound) + " ";
+    for (auto &j : problems) {
+      printMe += std::to_string(j->upperBound) + " ";
     }
-    spdlog::debug(
-        sstr("Picked ", pQueue.top()->upperBound, " from " + printMe));
+    spdlog::debug(sstr("Picked ", pick->upperBound, " from " + printMe));
 
-    return pQueue.top();
+    return pick;
   }
 }
 
@@ -420,7 +417,8 @@ std::pair<int, std::vector<int>> printInfo(glp_prob *prob,
         // Store the column index of the violated variable
         // violated.at(i - 1) = i;
         violated.push_back(i);
-        printer += "variable x[" + std::to_string(i) + "] integrality violated";
+        printer +=
+            "variable x[" + std::to_string(i) + "] integrality violated ";
       }
     }
   }

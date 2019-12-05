@@ -41,7 +41,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
   while (!leafContainer.empty()) {
     std::shared_ptr<MVOLP::NodeData> node = params.pickNode(leafContainer);
     root = treeIndex[node.get()->oid];
-    spdlog::debug("Current OID: " + std::to_string(node.get()->oid));
+    spdlog::debug(sstr("Current OID: " + std::to_string(node->oid),
+                       " with z-value ", node->upperBound));
     spdlog::debug("Container size: " + std::to_string(leafContainer.size()));
     glp_erase_prob(a);
     a = glp_create_prob();
