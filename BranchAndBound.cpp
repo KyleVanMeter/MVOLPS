@@ -39,7 +39,9 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
   int count = 0;
 
   while (!leafContainer.empty()) {
-    std::shared_ptr<MVOLP::NodeData> node = params.pickNode(leafContainer);
+    int index;
+    std::shared_ptr<MVOLP::NodeData> node =
+        params.pickNode(leafContainer, index);
     root = treeIndex[node.get()->oid];
     spdlog::debug(sstr("Current OID: " + std::to_string(node->oid),
                        " with z-value ", node->upperBound));
@@ -92,24 +94,24 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
                     std::to_string(glp_get_obj_val(a)) + "\n";
       }
 
-      leafContainer.pop_front();
+      leafContainer.erase(leafContainer.begin() + index);
     } else if (status == -1) {
       // Prune infeasible non-initial sub-problems
 
       root.node->data.prune = MVOLP::FEAS;
       spdlog::info("OID: " + std::to_string(node.get()->oid) +
                    ".  Pruning non-initial infeasible node");
-      leafContainer.pop_front();
+      leafContainer.erase(leafContainer.begin() + index);
     } else if (glp_get_obj_val(a) <= bestLower) {
       // Prune if node is worse then best lower bound
 
       root.node->data.prune = MVOLP::BNDS;
       spdlog::info("OID: " + std::to_string(node.get()->oid) +
                    ".  Pruning worse lower-bounded node");
-      leafContainer.pop_front();
+      leafContainer.erase(leafContainer.begin() + index);
     } else {
       spdlog::debug("Queue size is " + std::to_string(leafContainer.size()));
-      leafContainer.pop_front();
+      leafContainer.erase(leafContainer.begin() + index);
       spdlog::debug("Queue size is " + std::to_string(leafContainer.size()));
 
       int pick = params.pickVar(vars);

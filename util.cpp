@@ -152,7 +152,7 @@ void standard(glp_prob *prob) {
 }
 
 std::shared_ptr<MVOLP::NodeData> MVOLP::ParameterObj::pickNode(
-    const std::deque<std::shared_ptr<MVOLP::NodeData>> &problems) {
+    const std::deque<std::shared_ptr<MVOLP::NodeData>> &problems, int &index) {
   // FIFO node selection
   if (_nodeStrat == MVOLP::param::NodeStratType::DFS) {
     std::string printMe = "";
@@ -161,6 +161,8 @@ std::shared_ptr<MVOLP::NodeData> MVOLP::ParameterObj::pickNode(
     }
     spdlog::debug(
         sstr("Picked ", problems.front()->upperBound, " from " + printMe));
+
+    index = 0;
     return problems.front();
   }
 
@@ -172,8 +174,8 @@ std::shared_ptr<MVOLP::NodeData> MVOLP::ParameterObj::pickNode(
     };
 
     auto i = std::max_element(std::begin(problems), std::end(problems), cmp);
-    std::shared_ptr<MVOLP::NodeData> pick =
-        problems.at(std::distance(std::begin(problems), i));
+    index = std::distance(std::begin(problems), i);
+    std::shared_ptr<MVOLP::NodeData> pick = problems.at(index);
 
     std::string printMe = "";
     for (auto &j : problems) {
