@@ -1,4 +1,4 @@
-#include "BranchAndBound.h"
+#include "bs.h"
 #include "tree.hh"
 #include "tree_print.h"
 #include "tree_util.hh"
@@ -14,7 +14,7 @@
 // info and debug
 #include "spdlog/spdlog.h"
 
-int branchAndBound(glp_prob *prob, MVOLP::ParameterObj params) {
+int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
   tree<MVOLP::SPInfo> subProblems;
   // tree<int> subProblems;
   // maps OID to iterator of that node

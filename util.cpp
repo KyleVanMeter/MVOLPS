@@ -229,6 +229,14 @@ int MVOLP::ParameterObj::pickVar(const std::vector<int> &vars) {
   }
 }
 
+void MVOLP::ParameterObj::pickGenCuts() {
+  if (_cutStrat == MVOLP::param::CutStratType::GMI) {
+  }
+  if (_cutStrat == MVOLP::param::CutStratType::NONE) {
+    // Do nothing...
+  }
+}
+
 void MVOLP::ParameterObj::setVarStrat(const param::VarStratType a) {
   _varStrat = a;
 }
@@ -237,10 +245,18 @@ void MVOLP::ParameterObj::setNodeStrat(const param::NodeStratType a) {
   _nodeStrat = a;
 }
 
+void MVOLP::ParameterObj::setCutStrat(const param::CutStratType a) {
+  _cutStrat = a;
+}
+
 void MVOLP::ParameterObj::setStrategy(const param::VarStratType varStrat,
                                       const param::NodeStratType nodeStrat) {
   _varStrat = varStrat;
   _nodeStrat = nodeStrat;
+}
+
+void MVOLP::ParameterObj::setCutChance(const double chance) {
+  _cutChance = chance;
 }
 
 std::pair<MVOLP::param::VarStratType, MVOLP::param::NodeStratType>

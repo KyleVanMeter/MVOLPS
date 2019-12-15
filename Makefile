@@ -1,8 +1,8 @@
 CXX=g++
-CXXFLAGS=-lglpk -lspdlog -Wall -std=c++17 -Wpedantic
+CXXFLAGS=-lglpk -lspdlog -Wall -g -std=c++17 -Wpedantic
 HEADER=-I.
-DEPS=util.h tree.hh tree_print.h BranchAndBound.h
-OBJ=2test.o util.o BranchAndBound.o 
+DEPS=util.h tree.hh tree_print.h  bs.h
+OBJ=2test.o util.o bs.o
 RM=rm -f
 
 %.o: %.c $(DEPS)

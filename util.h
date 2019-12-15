@@ -26,6 +26,7 @@ enum PruneType { INTG = 0, FEAS = 1, BNDS = 3, NONE };
 namespace param {
 enum VarStratType { VO = 0, VFP = 1, VGO = 2 };
 enum NodeStratType { DFS = 0, BEST = 1 };
+enum CutStratType { NONE = 0, GMI = 1 };
 } // namespace param
 
 class NodeData {
@@ -67,15 +68,20 @@ public:
   std::shared_ptr<MVOLP::NodeData>
   pickNode(const std::deque<std::shared_ptr<MVOLP::NodeData>> &problems,
            int &index);
+  void pickGenCuts();
 
   void setStrategy(const param::VarStratType a, const param::NodeStratType b);
   void setVarStrat(const param::VarStratType a);
   void setNodeStrat(const param::NodeStratType a);
+  void setCutStrat(const param::CutStratType a);
+  void setCutChance(const double chance);
   std::pair<param::VarStratType, param::NodeStratType> getStrategy();
 
 private:
   param::VarStratType _varStrat;
   param::NodeStratType _nodeStrat;
+  param::CutStratType _cutStrat;
+  double _cutChance;
   glp_prob *_prob;
 };
 
