@@ -60,7 +60,8 @@ public:
   ParameterObj() = delete;
   ParameterObj(glp_prob *prob)
       : _varStrat(param::VarStratType::VO),
-        _nodeStrat(param::NodeStratType::DFS) {
+        _nodeStrat(param::NodeStratType::DFS),
+        _cutStrat(param::CutStratType::NONE) {
     _prob = prob;
   }
 
@@ -75,7 +76,7 @@ public:
   void setNodeStrat(const param::NodeStratType a);
   void setCutStrat(const param::CutStratType a);
   void setCutChance(const double chance);
-  std::pair<param::VarStratType, param::NodeStratType> getStrategy();
+  std::tuple<param::VarStratType, param::NodeStratType, param::CutStratType> getStrategy();
 
 private:
   param::VarStratType _varStrat;

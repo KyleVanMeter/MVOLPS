@@ -259,9 +259,9 @@ void MVOLP::ParameterObj::setCutChance(const double chance) {
   _cutChance = chance;
 }
 
-std::pair<MVOLP::param::VarStratType, MVOLP::param::NodeStratType>
+std::tuple<MVOLP::param::VarStratType, MVOLP::param::NodeStratType, MVOLP::param::CutStratType>
 MVOLP::ParameterObj::getStrategy() {
-  return std::make_pair(_varStrat, _nodeStrat);
+  return std::make_tuple(_varStrat, _nodeStrat, _cutStrat);
 }
 
 glp_prob *initProblem(std::string filename, MVOLP::FileType ft) {
