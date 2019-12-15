@@ -3,6 +3,8 @@
 #include "tree_print.h"
 #include "tree_util.hh"
 #include "util.h"
+#include "cut.h"
+#include "gmi.h"
 
 // std::trunc()
 #include <cmath>
@@ -15,6 +17,7 @@
 #include "spdlog/spdlog.h"
 
 int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
+  CutPool pool;
   tree<MVOLP::SPInfo> subProblems;
   // tree<int> subProblems;
   // maps OID to iterator of that node
@@ -113,6 +116,17 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       spdlog::debug("Queue size is " + std::to_string(leafContainer.size()));
       leafContainer.erase(leafContainer.begin() + index);
 
+      if (params.IsCutEnabled()) {
+        for (int j = 1; j <= glp_get_num_cols(a); j++) {
+          CutContainer result = generateCut3(a, j);
+          if (result.oid != -1) {
+            pool.addToPool(result);
+          }
+        }
+
+        pool.addCutConstraint(a);
+      }
+
       int pick = params.pickVar(vars);
       double bound = glp_get_col_prim(a, pick);
 
@@ -159,8 +173,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     count++;
   }
 
-  std::cout << "\nSolution is: " + solution + "\n";
 
+  std::cout << "[I = Integral node, F = Infeasible node, B = Worse bound node]\n";
   PrettyPrintTree(subProblems, subProblems.begin(), [](MVOLP::SPInfo &in) {
     if (in.prune == MVOLP::INTG) {
       return std::to_string(in.oid) + " I";
@@ -172,6 +186,9 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       return std::to_string(in.oid);
     }
   });
+
+  std::cout << "\nSolution is: " + solution + "\n";
+  spdlog::info(sstr("Solution found after ", count, " iterations"));
 
   return 0;
 }

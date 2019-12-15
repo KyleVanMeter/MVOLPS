@@ -136,6 +136,8 @@ int main(int argc, char **argv) {
       } else {
         params.setCutChance(1.0);
       }
+    } else {
+      params.setCutStrat(MVOLP::param::CutStratType::NONE);
     }
 
     branchAndBound(prob, params);

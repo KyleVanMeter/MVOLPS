@@ -76,6 +76,7 @@ public:
   void setNodeStrat(const param::NodeStratType a);
   void setCutStrat(const param::CutStratType a);
   void setCutChance(const double chance);
+  bool IsCutEnabled();
   std::tuple<param::VarStratType, param::NodeStratType, param::CutStratType> getStrategy();
 
 private:
