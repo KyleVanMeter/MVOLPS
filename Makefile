@@ -2,7 +2,7 @@ CXX=g++
 CXXFLAGS=-lglpk -lspdlog -Wall -g -std=c++17 -Wpedantic
 HEADER=-I.
 DEPS=util.h tree.hh tree_print.h bs.h cut.h gmi.h
-OBJ=2test.o util.o bs.o cut.cpp gmi.cpp
+OBJ=2test.o util.o bs.o cut.o gmi.o
 RM=rm -f
 
 %.o: %.c $(DEPS)
