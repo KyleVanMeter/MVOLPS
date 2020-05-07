@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
     std::cout << "Usage: MVOLPS [OPTION]\n"
               << "File input options:\n"
               << "  -f/--file [FILENAME.{mps|lp}]\n\n"
+              << "  --server [port] start server on given port"
               << "Output verbosity options:\n"
               << "  -s/--silent\n"
               << "  -v/--verbose\n"
@@ -80,6 +81,13 @@ int main(int argc, char **argv) {
     }
 
     MVOLP::ParameterObj params(prob);
+
+    if (input.CMDOptionExists("--server")) {
+      std::string option = input.getCMDOption("--server");
+      int port = std::stoi(option);
+
+      params.setServerPort(port);
+    }
 
     if (input.CMDOptionExists("-bs")) {
       std::string option = input.getCMDOption("-bs");

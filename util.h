@@ -63,6 +63,7 @@ public:
         _nodeStrat(param::NodeStratType::DFS),
         _cutStrat(param::CutStratType::NONE) {
     _prob = prob;
+    _startServer = false;
   }
 
   int pickVar(const std::vector<int> &vars);
@@ -79,12 +80,17 @@ public:
   bool IsCutEnabled();
   std::tuple<param::VarStratType, param::NodeStratType, param::CutStratType> getStrategy();
 
+  void setServerPort(int port);
+
 private:
   param::VarStratType _varStrat;
   param::NodeStratType _nodeStrat;
   param::CutStratType _cutStrat;
   double _cutChance;
   glp_prob *_prob;
+
+  int _port;
+  bool _startServer;
 };
 
 // This keeps track of which row, or column we make a change to when

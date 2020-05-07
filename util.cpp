@@ -264,6 +264,11 @@ bool MVOLP::ParameterObj::IsCutEnabled() {
   return _cutStrat != param::CutStratType::NONE;
 }
 
+void MVOLP::ParameterObj::setServerPort(int port) {
+  _startServer = true;
+  _port = port;
+}
+
 std::tuple<MVOLP::param::VarStratType, MVOLP::param::NodeStratType, MVOLP::param::CutStratType>
 MVOLP::ParameterObj::getStrategy() {
   return std::make_tuple(_varStrat, _nodeStrat, _cutStrat);

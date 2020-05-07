@@ -6,6 +6,7 @@
 #include "cut.h"
 #include "gmi.h"
 
+#include <zmqpp/zmqpp.hpp>
 // std::trunc()
 #include <cmath>
 // std::accumulate()
