@@ -11,8 +11,11 @@
 #include <sstream>
 // std::dec
 #include <iostream>
+//
+#include <chrono>
 
 static int id = 1;
+static auto startTime = std::chrono::high_resolution_clock::now();
 
 namespace MVOLP {
 enum Operation { ADD = 1, MULT = 2 };
@@ -115,7 +118,7 @@ double evalObj(std::vector<double> coef);
 int getGlpTerm();
 
 // Template to convert any number of things to std::string
-// Use like: sstr("thing," 1, etc)
+// Use like: sstr("thing", 1, etc)
 template <typename... Args> std::string sstr(Args &&... args) {
   std::ostringstream sstr;
   (sstr << std::dec << ... << args);

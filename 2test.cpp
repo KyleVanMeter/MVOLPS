@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     std::cout << "Usage: MVOLPS [OPTION]\n"
               << "File input options:\n"
               << "  -f/--file [FILENAME.{mps|lp}]\n\n"
-              << "  --server [port] start server on given port"
+              << "  --server [port] start server on given port\n"
               << "Output verbosity options:\n"
               << "  -s/--silent\n"
               << "  -v/--verbose\n"

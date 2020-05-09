@@ -1,10 +1,11 @@
 #include "bs.h"
+#include "cut.h"
+#include "gmi.h"
+#include "message.h"
 #include "tree.hh"
 #include "tree_print.h"
 #include "tree_util.hh"
 #include "util.h"
-#include "cut.h"
-#include "gmi.h"
 
 #include <zmqpp/zmqpp.hpp>
 // std::trunc()
@@ -18,6 +19,16 @@
 #include "spdlog/spdlog.h"
 
 int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
+  MVOLP::BaseMessageDispatch::define<MVOLP::LogDispatch>("LogDispatch");
+  std::shared_ptr<MVOLP::LogDispatch> logInfo =
+      std::dynamic_pointer_cast<MVOLP::LogDispatch>(
+          MVOLP::BaseMessageDispatch::create("LogDispatch"));
+
+  MVOLP::BaseMessageDispatch::define<MVOLP::DebugDispatch>("DebugDispatch");
+  std::shared_ptr<MVOLP::DebugDispatch> logDebug =
+      std::dynamic_pointer_cast<MVOLP::DebugDispatch>(
+          MVOLP::BaseMessageDispatch::create("DebugDispatch"));
+
   CutPool pool;
   tree<MVOLP::SPInfo> subProblems;
   // tree<int> subProblems;
@@ -174,8 +185,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     count++;
   }
 
-
-  std::cout << "[I = Integral node, F = Infeasible node, B = Worse bound node]\n";
+  std::cout
+      << "[I = Integral node, F = Infeasible node, B = Worse bound node]\n";
   PrettyPrintTree(subProblems, subProblems.begin(), [](MVOLP::SPInfo &in) {
     if (in.prune == MVOLP::INTG) {
       return std::to_string(in.oid) + " I";
