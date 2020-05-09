@@ -58,9 +58,12 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     std::shared_ptr<MVOLP::NodeData> node =
         params.pickNode(leafContainer, index);
     root = treeIndex[node.get()->oid];
-    spdlog::debug(sstr("Current OID: " + std::to_string(node->oid),
-                       " with z-value ", node->upperBound));
-    spdlog::debug("Container size: " + std::to_string(leafContainer.size()));
+    logDebug
+        ->message(sstr("Current OID: " + std::to_string(node->oid),
+                       " with z-value ", node->upperBound))
+        ->write();
+    logDebug->message("Container size: " + std::to_string(leafContainer.size()))
+        ->write();
     glp_erase_prob(a);
     a = glp_create_prob();
     glp_copy_prob(a, node.get()->prob, GLP_OFF);
@@ -85,14 +88,16 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       // Prune by integrality
 
       root.node->data.prune = MVOLP::INTG;
-      spdlog::info("OID: " + std::to_string(node.get()->oid) +
-                   ".  Pruning integral node.");
+      logInfo
+          ->message(sstr("OID: ", node.get()->oid, ".  Pruning integral node."))
+          ->write();
       node.get()->upperBound = glp_get_obj_val(a);
       if (node.get()->upperBound > bestLower) {
         bestLower = node.get()->upperBound;
-        spdlog::info("OID: " + std::to_string(node.get()->oid) +
-                     ".  Updating best lower bound to " +
-                     std::to_string(bestLower));
+        logInfo
+            ->message(sstr("OID: ", node.get()->oid,
+                           ".  Updating best lower bound to ", bestLower))
+            ->write();
 
         solution = "";
         for (int i = 1; i <= glp_get_num_cols(a); i++) {
@@ -114,18 +119,23 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       // Prune infeasible non-initial sub-problems
 
       root.node->data.prune = MVOLP::FEAS;
-      spdlog::info("OID: " + std::to_string(node.get()->oid) +
-                   ".  Pruning non-initial infeasible node");
+      logInfo
+          ->message(sstr("OID: ", node.get()->oid,
+                         ".  Pruning non-initial infeasible node"))
+          ->write();
       leafContainer.erase(leafContainer.begin() + index);
     } else if (glp_get_obj_val(a) <= bestLower) {
       // Prune if node is worse then best lower bound
 
       root.node->data.prune = MVOLP::BNDS;
-      spdlog::info("OID: " + std::to_string(node.get()->oid) +
-                   ".  Pruning worse lower-bounded node");
+      logInfo
+          ->message(sstr("OID: ", node.get()->oid,
+                         ".  Pruning worse lower-bounded node"))
+          ->write();
       leafContainer.erase(leafContainer.begin() + index);
     } else {
-      spdlog::debug("Queue size is " + std::to_string(leafContainer.size()));
+      logDebug->message("Queue size is " + std::to_string(leafContainer.size()))
+          ->write();
       leafContainer.erase(leafContainer.begin() + index);
 
       if (params.IsCutEnabled()) {
@@ -146,7 +156,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       for (auto i : vars) {
         printMe += "x[ " + std::to_string(i) + "] ";
       }
-      spdlog::debug(printMe);
+      logDebug->message(printMe)->write();
 
       std::shared_ptr<MVOLP::NodeData> S2 =
           std::make_shared<MVOLP::NodeData>(a);
@@ -154,16 +164,18 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       std::shared_ptr<MVOLP::NodeData> S3 =
           std::make_shared<MVOLP::NodeData>(a);
       glp_set_col_bnds(S2->prob, pick, GLP_UP, 0, floor(bound));
-      spdlog::info("Adding constraint " + std::to_string(floor(bound)) +
-                   " >= " + "x[" + std::to_string(pick) + "] to object " +
-                   std::to_string(S2->oid));
+      logInfo
+          ->message(sstr("Adding constraint ", floor(bound), " >= x[", pick,
+                         "] to object ", S2->oid))
+          ->write();
       glp_simplex(S2->prob, NULL);
       S2->upperBound = glp_get_obj_val(S2->prob);
 
       glp_set_col_bnds(S3->prob, pick, GLP_LO, ceil(bound), 0);
-      spdlog::info("Adding constraint " + std::to_string(ceil(bound)) +
-                   " <= " + "x[" + std::to_string(pick) + "] to object " +
-                   std::to_string(S3->oid));
+      logInfo
+          ->message(sstr("Adding constraint ", ceil(bound), " <= ", "x[", pick,
+                         "] to object ", S3->oid))
+          ->write();
       glp_simplex(S3->prob, NULL);
       S3->upperBound = glp_get_obj_val(S3->prob);
 
@@ -200,7 +212,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
   });
 
   std::cout << "\nSolution is: " + solution + "\n";
-  spdlog::info(sstr("Solution found after ", count, " iterations"));
+  logInfo->message(sstr("Solution found after ", count, " iterations"))
+      ->write();
 
   return 0;
 }
