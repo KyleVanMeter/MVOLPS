@@ -1,6 +1,5 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
-#include "util.h"
 
 #include <map>
 #include <memory>
@@ -79,7 +78,8 @@ class DebugDispatch : public BaseMessageDispatch {
 public:
   virtual void write() const;
 
-  template <class... Args> DebugDispatch *message(Args &&... args);
+  //template <class... Args> DebugDispatch *message(Args &&... args);
+  DebugDispatch *message(std::string in);
 
 private:
   std::string _msg;

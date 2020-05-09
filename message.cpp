@@ -1,5 +1,4 @@
 #include "message.h"
-#include "util.h"
 #include "spdlog/spdlog.h"
 #include <string>
 
@@ -25,8 +24,14 @@ void DebugDispatch::write() const {
   spdlog::debug(_msg);
 }
 
+/*
 template<class... Args>
 DebugDispatch* DebugDispatch::message(Args&& ...args) {
   _msg = sstr(args...);
+  return this;
+}
+*/
+DebugDispatch* DebugDispatch::message(std::string in) {
+  _msg = in;
   return this;
 }
