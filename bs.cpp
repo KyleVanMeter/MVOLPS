@@ -29,6 +29,13 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       std::dynamic_pointer_cast<MVOLP::DebugDispatch>(
           MVOLP::BaseMessageDispatch::create("DebugDispatch"));
 
+  /*
+  MVOLP::BaseMessageDispatch::define<MVOLP::IPCDispatch>("IPCDispatch");
+  std::shared_ptr<MVOLP::IPCDispatch> mqDispatch =
+      std::dynamic_pointer_cast<MVOLP::IPCDispatch>(
+          MVOLP::BaseMessageDispatch::create("IPCDispatch"));
+  */
+
   CutPool pool;
   tree<MVOLP::SPInfo> subProblems;
   // tree<int> subProblems;
@@ -59,11 +66,10 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
         params.pickNode(leafContainer, index);
     root = treeIndex[node.get()->oid];
     logDebug
-        ->message(sstr("Current OID: " + std::to_string(node->oid),
-                       " with z-value ", node->upperBound))
+        ->message(sstr("Current OID: ", node->oid, " with z-value ",
+                       node->upperBound))
         ->write();
-    logDebug->message("Container size: " + std::to_string(leafContainer.size()))
-        ->write();
+    logDebug->message(sstr("Container size: ", leafContainer.size()))->write();
     glp_erase_prob(a);
     a = glp_create_prob();
     glp_copy_prob(a, node.get()->prob, GLP_OFF);
@@ -86,13 +92,15 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
     if (status == 1) {
       // Prune by integrality
+      node.get()->upperBound = glp_get_obj_val(a);
 
       root.node->data.prune = MVOLP::INTG;
       logInfo
           ->message(sstr("OID: ", node.get()->oid, ".  Pruning integral node."))
           ->write();
-      node.get()->upperBound = glp_get_obj_val(a);
+
       if (node.get()->upperBound > bestLower) {
+        // Current best solution
         bestLower = node.get()->upperBound;
         logInfo
             ->message(sstr("OID: ", node.get()->oid,
@@ -102,16 +110,14 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
         solution = "";
         for (int i = 1; i <= glp_get_num_cols(a); i++) {
           if (glp_get_col_prim(a, i) != 0 && glp_get_obj_coef(a, i) != 0) {
-            solution += std::to_string(glp_get_obj_coef(a, i)) + "*(x[" +
-                        std::to_string(i) +
-                        "] = " + std::to_string(glp_get_col_prim(a, i)) +
-                        ") + ";
+            solution += sstr((glp_get_obj_coef(a, i)), "*(x[", i,
+                             "] = ", (glp_get_col_prim(a, i)), ") + ");
           }
         }
 
         // Constant (shift) term
-        solution += std::to_string(glp_get_obj_coef(a, 0)) + " = " +
-                    std::to_string(glp_get_obj_val(a)) + "\n";
+        solution +=
+            sstr(glp_get_obj_coef(a, 0), " = ", glp_get_obj_val(a), "\n");
       }
 
       leafContainer.erase(leafContainer.begin() + index);
@@ -134,8 +140,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
           ->write();
       leafContainer.erase(leafContainer.begin() + index);
     } else {
-      logDebug->message("Queue size is " + std::to_string(leafContainer.size()))
-          ->write();
+      logDebug->message(sstr("Queue size is ", leafContainer.size()))->write();
       leafContainer.erase(leafContainer.begin() + index);
 
       if (params.IsCutEnabled()) {
@@ -154,7 +159,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
       std::string printMe = "Violated variables are: ";
       for (auto i : vars) {
-        printMe += "x[ " + std::to_string(i) + "] ";
+        printMe += sstr("x[ ", i, "] ");
       }
       logDebug->message(printMe)->write();
 
