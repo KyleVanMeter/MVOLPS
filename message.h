@@ -1,8 +1,12 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
+#include "util.h"
+
+#include <chrono>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace MVOLP {
@@ -67,7 +71,7 @@ class LogDispatch : public BaseMessageDispatch {
 public:
   virtual void write() const;
 
-  //template <class... Args> LogDispatch *message(Args &&... args);
+  // template <class... Args> LogDispatch *message(Args &&... args);
   LogDispatch *message(std::string in);
 
 private:
@@ -78,7 +82,7 @@ class DebugDispatch : public BaseMessageDispatch {
 public:
   virtual void write() const;
 
-  //template <class... Args> DebugDispatch *message(Args &&... args);
+  // template <class... Args> DebugDispatch *message(Args &&... args);
   DebugDispatch *message(std::string in);
 
 private:
@@ -97,46 +101,116 @@ enum EventType {
 enum BranchDirection { L, R, M };
 
 struct BaseMessagePOD {
-  double timeSpan;
-  EventType type;
+  double timeSpan = std::chrono::duration<double, std::milli>(
+                        std::chrono::high_resolution_clock::now() - startTime)
+                        .count();
+  EventType nodeType;
   int oid;
   int pid;
   BranchDirection direction;
+
+  friend std::ostream &operator<<(std::ostream &os, const BaseMessagePOD &in) {
+    os << in.timeSpan << " " << in.nodeType << " " << in.oid << " " << in.pid
+       << " " << in.direction << "\n";
+
+    return os;
+  }
 };
 
-struct HeurMessagePOD : public BaseMessagePOD {
+struct HeurMessagePOD {
+  BaseMessagePOD baseFields;
   double value;
+
+  friend std::ostream &operator<<(std::ostream &os, const HeurMessagePOD &in) {
+    os << in.baseFields << " " << in.value << "\n";
+
+    return os;
+  }
 };
 
-struct InfeasMessagePOD : public BaseMessagePOD {
+struct InfeasMessagePOD {
+  BaseMessagePOD baseFields;
   int bCond;
   int eCond;
+
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const InfeasMessagePOD &in) {
+    os << in.baseFields << " " << in.bCond << " " << in.eCond << "\n";
+
+    return os;
+  }
 };
 
-struct BranchMessagePOD : public BaseMessagePOD {
+struct BranchMessagePOD {
+  BaseMessagePOD baseFields;
   double LPBound;
   double infeasCount;
   int violatedCount;
   int bCond;
   int eCond;
+
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const BranchMessagePOD &in) {
+    os << in.baseFields << " " << in.LPBound << " " << in.infeasCount << " "
+       << in.violatedCount << " " << in.bCond << " " << in.eCond << "\n";
+
+    return os;
+  }
 };
 
-struct CandMessagePOD : public BaseMessagePOD {
-  int LPBound;
+struct CandMessagePOD {
+  BaseMessagePOD baseFields;
+  double LPBound;
+
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const CandMessagePOD&in) {
+    os << in.baseFields << " " << in.LPBound << "\n";
+
+    return os;
+  }
 };
 
-struct InteMessagePOD : public BaseMessagePOD {
-  int LPBound;
+struct InteMessagePOD {
+  BaseMessagePOD baseFields;
+  double LPBound;
   int bCond;
   int eCond;
+
+  friend std::ostream &operator<<(std::ostream &os, const InteMessagePOD &in) {
+    os << in.baseFields << " " << in.LPBound << " " << in.bCond << " " << in.eCond << "\n";
+
+    return os;
+  }
 };
 
-struct FathMessagePOD : public BaseMessagePOD {};
+struct FathMessagePOD {
+  BaseMessagePOD baseFields;
+
+  friend std::ostream &operator<<(std::ostream &os, const FathMessagePOD &in) {
+    os << in.baseFields << "\n";
+
+    return os;
+  }
+};
 
 class IPCDispatch : public BaseMessageDispatch {
 public:
   virtual void write() const;
-  IPCDispatch *message(std::string in);
+  // IPCDispatch *message(std::string in);
+
+  /*
+  double timeStamp;
+  EventType type;
+  int oid;
+  int pid;
+  BranchDirection direction;
+  */
+  std::optional<BaseMessagePOD> baseFields;
+  std::optional<double> field6;
+  std::optional<double> field7;
+  std::optional<int> field8;
+  std::optional<int> field9;
+  std::optional<int> field10;
 
 private:
   std::string _msg;
