@@ -38,6 +38,10 @@ void IPCDispatch::write() const {
       std::variant<BranchMessagePOD, CandMessagePOD, FathMessagePOD,
                    HeurMessagePOD, InfeasMessagePOD, InteMessagePOD>;
 
+  if (!baseFields.has_value()) {
+    throw std::invalid_argument("BaseMessagePOD has incomplete information");
+  }
+
   // Collect data in correct type, DNF form logic
   auto result = [&]() -> MessageVariant {
     MessageVariant ret;
@@ -56,7 +60,8 @@ void IPCDispatch::write() const {
         wtf.baseFields.pid = this->baseFields.value().pid;
         wtf.baseFields.direction = this->baseFields.value().direction;
         wtf.LPBound = field6.value();
-        wtf.infeasCount = field7.value(), wtf.violatedCount = field8.value();
+        wtf.infeasCount = field7.value();
+        wtf.violatedCount = field8.value();
         wtf.bCond = field9.value();
         wtf.eCond = field10.value();
 
@@ -145,7 +150,7 @@ void IPCDispatch::write() const {
         "IPCDispatch invalid arguments to specific message constructor");
   }();
 
-  std::visit([](auto &&arg) { std::cout << "?????\n\n?????\n\n"; }, result);
+  std::visit([](auto &&arg) { std::cout << arg; }, result);
 
   // Send zmq message to client
 }
