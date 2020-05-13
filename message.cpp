@@ -49,17 +49,16 @@ void IPCDispatch::write() const {
         // Named initialization is not possible on non-aggregate types.  Any
         // object that has a base class (even if POD) is categorically excluded
         // from being an aggregate type.  WHY???
-        // EDIT: got rid of inheritance structure; nested structs instead.
-        BranchMessagePOD wtf{.baseFields = {this->baseFields.value().timeSpan,
-                                            this->baseFields.value().nodeType,
-                                            this->baseFields.value().oid,
-                                            this->baseFields.value().pid,
-                                            this->baseFields.value().direction},
-                             .LPBound = field6.value(),
-                             .infeasCount = field7.value(),
-                             .violatedCount = field8.value(),
-                             .bCond = field9.value(),
-                             .eCond = field10.value()};
+        BranchMessagePOD wtf;
+        wtf.baseFields.timeSpan = this->baseFields.value().timeSpan;
+        wtf.baseFields.nodeType = this->baseFields.value().nodeType;
+        wtf.baseFields.oid = this->baseFields.value().oid;
+        wtf.baseFields.pid = this->baseFields.value().pid;
+        wtf.baseFields.direction = this->baseFields.value().direction;
+        wtf.LPBound = field6.value();
+        wtf.infeasCount = field7.value(), wtf.violatedCount = field8.value();
+        wtf.bCond = field9.value();
+        wtf.eCond = field10.value();
 
         ret = wtf;
         return ret;
@@ -70,12 +69,14 @@ void IPCDispatch::write() const {
       if (field6.has_value() && !field7.has_value() && !field8.has_value() &&
           !field9.has_value() && !field10.has_value() &&
           baseFields.has_value()) {
-        CandMessagePOD wtf{.baseFields = {this->baseFields.value().timeSpan,
-                                          this->baseFields.value().nodeType,
-                                          this->baseFields.value().oid,
-                                          this->baseFields.value().pid,
-                                          this->baseFields.value().direction},
-                           .LPBound = field6.value()};
+
+        CandMessagePOD wtf;
+        wtf.baseFields.timeSpan = this->baseFields.value().timeSpan;
+        wtf.baseFields.nodeType = this->baseFields.value().nodeType;
+        wtf.baseFields.oid = this->baseFields.value().oid;
+        wtf.baseFields.pid = this->baseFields.value().pid;
+        wtf.baseFields.direction = this->baseFields.value().direction;
+        wtf.LPBound = field6.value();
 
         ret = wtf;
         return ret;
@@ -86,11 +87,12 @@ void IPCDispatch::write() const {
       if (!field6.has_value() && !field7.has_value() && !field8.has_value() &&
           !field9.has_value() && !field10.has_value() &&
           baseFields.has_value()) {
-        FathMessagePOD wtf{.baseFields = {this->baseFields.value().timeSpan,
-                                          this->baseFields.value().nodeType,
-                                          this->baseFields.value().oid,
-                                          this->baseFields.value().pid,
-                                          this->baseFields.value().direction}};
+        FathMessagePOD wtf;
+        wtf.baseFields.timeSpan = this->baseFields.value().timeSpan;
+        wtf.baseFields.nodeType = this->baseFields.value().nodeType;
+        wtf.baseFields.oid = this->baseFields.value().oid;
+        wtf.baseFields.pid = this->baseFields.value().pid;
+        wtf.baseFields.direction = this->baseFields.value().direction;
 
         ret = wtf;
         return ret;
@@ -103,13 +105,15 @@ void IPCDispatch::write() const {
       // Field 9 & field 10 must be present
       if (!field6.has_value() && !field7.has_value() && !field8.has_value() &&
           field9.has_value() && field10.has_value() && baseFields.has_value()) {
-        InfeasMessagePOD wtf{.baseFields = {this->baseFields.value().timeSpan,
-                                            this->baseFields.value().nodeType,
-                                            this->baseFields.value().oid,
-                                            this->baseFields.value().pid,
-                                            this->baseFields.value().direction},
-                             .bCond = field9.value(),
-                             .eCond = field10.value()};
+        InfeasMessagePOD wtf;
+
+        wtf.baseFields.timeSpan = this->baseFields.value().timeSpan;
+        wtf.baseFields.nodeType = this->baseFields.value().nodeType;
+        wtf.baseFields.oid = this->baseFields.value().oid;
+        wtf.baseFields.pid = this->baseFields.value().pid;
+        wtf.baseFields.direction = this->baseFields.value().direction;
+        wtf.bCond = field9.value();
+        wtf.eCond = field10.value();
 
         ret = wtf;
         return ret;
@@ -119,14 +123,16 @@ void IPCDispatch::write() const {
       // Field 6, field 9, and field 10 must be present
       if (field6.has_value() && !field7.has_value() && !field8.has_value() &&
           field9.has_value() && field10.has_value() && baseFields.has_value()) {
-        InteMessagePOD wtf{.baseFields = {this->baseFields.value().timeSpan,
-                                          this->baseFields.value().nodeType,
-                                          this->baseFields.value().oid,
-                                          this->baseFields.value().pid,
-                                          this->baseFields.value().direction},
-                           .LPBound = field6.value(),
-                           .bCond = field9.value(),
-                           .eCond = field10.value()};
+        InteMessagePOD wtf;
+
+        wtf.baseFields.timeSpan = this->baseFields.value().timeSpan;
+        wtf.baseFields.nodeType = this->baseFields.value().nodeType;
+        wtf.baseFields.oid = this->baseFields.value().oid;
+        wtf.baseFields.pid = this->baseFields.value().pid;
+        wtf.baseFields.direction = this->baseFields.value().direction;
+        wtf.LPBound = field6.value();
+        wtf.bCond = field9.value();
+        wtf.eCond = field10.value();
 
         ret = wtf;
         return ret;
@@ -139,7 +145,39 @@ void IPCDispatch::write() const {
         "IPCDispatch invalid arguments to specific message constructor");
   }();
 
-  std::visit([](auto &&arg) { std::cout << arg; }, result);
+  std::visit([](auto &&arg) { std::cout << "?????\n\n?????\n\n"; }, result);
 
   // Send zmq message to client
 }
+
+// Type definitions for field-helper tuples.  Needed for metaprogramming
+decltype(BaseMessagePOD::typeInfo)
+    BaseMessagePOD::typeInfo(&BaseMessagePOD::timeSpan,
+                             &BaseMessagePOD::nodeType, &BaseMessagePOD::oid,
+                             &BaseMessagePOD::pid, &BaseMessagePOD::direction);
+
+decltype(HeurMessagePOD::typeInfo)
+    HeurMessagePOD::typeInfo(&HeurMessagePOD::baseFields,
+                             &HeurMessagePOD::value);
+
+decltype(InfeasMessagePOD::typeInfo)
+    InfeasMessagePOD::typeInfo(&InfeasMessagePOD::baseFields,
+                               &InfeasMessagePOD::bCond,
+                               &InfeasMessagePOD::eCond);
+
+decltype(BranchMessagePOD::typeInfo) BranchMessagePOD::typeInfo(
+    &BranchMessagePOD::baseFields, &BranchMessagePOD::LPBound,
+    &BranchMessagePOD::infeasCount, &BranchMessagePOD::violatedCount,
+    &BranchMessagePOD::bCond, &BranchMessagePOD::eCond);
+
+decltype(CandMessagePOD::typeInfo)
+    CandMessagePOD::typeInfo(&CandMessagePOD::baseFields,
+                             &CandMessagePOD::LPBound);
+
+decltype(InteMessagePOD::typeInfo)
+    InteMessagePOD::typeInfo(&InteMessagePOD::baseFields,
+                             &InteMessagePOD::LPBound, &InteMessagePOD::bCond,
+                             &InteMessagePOD::eCond);
+
+decltype(FathMessagePOD::typeInfo)
+    FathMessagePOD::typeInfo(&FathMessagePOD::baseFields);

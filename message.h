@@ -8,6 +8,10 @@
 #include <memory>
 #include <optional>
 #include <string>
+// For automatic operator<< to message structs
+#include <iostream>
+#include <tuple>
+#include <type_traits>
 
 namespace MVOLP {
 template <class Interface, class KeyT = std::string> class Factory {
@@ -89,6 +93,34 @@ private:
   std::string _msg;
 };
 
+/*
+ * The purpose of these templates is to at least somewhat automatically generate
+ * operators for sum-types (structs) whose data members support such an
+ * operation.  In this specific case this is to facilitate operator<< for each
+ * *MessagePOD data-type.
+ */
+template <size_t... Ns> struct indices {};
+
+template <size_t N, size_t... Ns>
+struct build_indices : build_indices<N - 1, N - 1, Ns...> {};
+
+template <size_t... Ns> struct build_indices<0, Ns...> : indices<Ns...> {};
+
+template <typename T, typename Tuple, size_t... Indices>
+void memberOut(std::ostream &stream, T &in, const Tuple &typeInfo,
+               indices<Indices...>) {
+  ((stream << in.*std::get<Indices>(typeInfo) << " "), ...);
+}
+
+template <typename T> struct Streamer {
+  friend std::ostream &operator<<(std::ostream &stream, Streamer<T> &in) {
+    memberOut(stream, *static_cast<T *>(&in), T::typeInfo,
+              build_indices<std::tuple_size<decltype(T::typeInfo)>::value>{});
+
+    return stream;
+  }
+};
+
 enum EventType {
   heuristic,
   infeasible,
@@ -100,7 +132,7 @@ enum EventType {
 
 enum BranchDirection { L, R, M };
 
-struct BaseMessagePOD {
+struct BaseMessagePOD : public Streamer<BaseMessagePOD> {
   double timeSpan = std::chrono::duration<double, std::milli>(
                         std::chrono::high_resolution_clock::now() - startTime)
                         .count();
@@ -109,39 +141,34 @@ struct BaseMessagePOD {
   int pid;
   BranchDirection direction;
 
-  friend std::ostream &operator<<(std::ostream &os, const BaseMessagePOD &in) {
-    os << in.timeSpan << " " << in.nodeType << " " << in.oid << " " << in.pid
-       << " " << in.direction << "\n";
-
-    return os;
-  }
+  const static std::tuple<
+      decltype(&BaseMessagePOD::timeSpan), decltype(&BaseMessagePOD::nodeType),
+      decltype(&BaseMessagePOD::oid), decltype(&BaseMessagePOD::pid),
+      decltype(&BaseMessagePOD::direction)>
+      typeInfo;
 };
 
-struct HeurMessagePOD {
+struct HeurMessagePOD : public Streamer<HeurMessagePOD> {
   BaseMessagePOD baseFields;
   double value;
 
-  friend std::ostream &operator<<(std::ostream &os, const HeurMessagePOD &in) {
-    os << in.baseFields << " " << in.value << "\n";
-
-    return os;
-  }
+  const static std::tuple<decltype(&HeurMessagePOD::baseFields),
+                          decltype(&HeurMessagePOD::value)>
+      typeInfo;
 };
 
-struct InfeasMessagePOD {
+struct InfeasMessagePOD : public Streamer<InfeasMessagePOD> {
   BaseMessagePOD baseFields;
   int bCond;
   int eCond;
 
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const InfeasMessagePOD &in) {
-    os << in.baseFields << " " << in.bCond << " " << in.eCond << "\n";
-
-    return os;
-  }
+  const static std::tuple<decltype(&InfeasMessagePOD::baseFields),
+                          decltype(&InfeasMessagePOD::bCond),
+                          decltype(&InfeasMessagePOD::eCond)>
+      typeInfo;
 };
 
-struct BranchMessagePOD {
+struct BranchMessagePOD : public Streamer<BranchMessagePOD> {
   BaseMessagePOD baseFields;
   double LPBound;
   double infeasCount;
@@ -149,48 +176,40 @@ struct BranchMessagePOD {
   int bCond;
   int eCond;
 
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const BranchMessagePOD &in) {
-    os << in.baseFields << " " << in.LPBound << " " << in.infeasCount << " "
-       << in.violatedCount << " " << in.bCond << " " << in.eCond << "\n";
-
-    return os;
-  }
+  const static std::tuple<decltype(&BranchMessagePOD::baseFields),
+                          decltype(&BranchMessagePOD::LPBound),
+                          decltype(&BranchMessagePOD::infeasCount),
+                          decltype(&BranchMessagePOD::violatedCount),
+                          decltype(&BranchMessagePOD::bCond),
+                          decltype(&BranchMessagePOD::eCond)>
+      typeInfo;
 };
 
-struct CandMessagePOD {
+struct CandMessagePOD : public Streamer<CandMessagePOD> {
   BaseMessagePOD baseFields;
   double LPBound;
 
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const CandMessagePOD&in) {
-    os << in.baseFields << " " << in.LPBound << "\n";
-
-    return os;
-  }
+  const static std::tuple<decltype(&CandMessagePOD::baseFields),
+                          decltype(&CandMessagePOD::LPBound)>
+      typeInfo;
 };
 
-struct InteMessagePOD {
+
+struct InteMessagePOD : public Streamer<InteMessagePOD> {
   BaseMessagePOD baseFields;
   double LPBound;
   int bCond;
   int eCond;
 
-  friend std::ostream &operator<<(std::ostream &os, const InteMessagePOD &in) {
-    os << in.baseFields << " " << in.LPBound << " " << in.bCond << " " << in.eCond << "\n";
-
-    return os;
-  }
+  const static std::tuple<
+      decltype(&InteMessagePOD::baseFields), decltype(&InteMessagePOD::LPBound),
+      decltype(&InteMessagePOD::bCond), decltype(&InteMessagePOD::eCond)>
+      typeInfo;
 };
 
-struct FathMessagePOD {
+struct FathMessagePOD : public Streamer<FathMessagePOD> {
   BaseMessagePOD baseFields;
-
-  friend std::ostream &operator<<(std::ostream &os, const FathMessagePOD &in) {
-    os << in.baseFields << "\n";
-
-    return os;
-  }
+  const static std::tuple<decltype(&FathMessagePOD::baseFields)> typeInfo;
 };
 
 class IPCDispatch : public BaseMessageDispatch {
