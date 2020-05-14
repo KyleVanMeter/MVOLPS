@@ -12,6 +12,8 @@
 #include <iostream>
 #include <tuple>
 #include <type_traits>
+// automatic operator<< for enums (enum to string)
+#include <magic_enum.hpp>
 
 namespace MVOLP {
 template <class Interface, class KeyT = std::string> class Factory {
@@ -109,6 +111,7 @@ template <size_t... Ns> struct build_indices<0, Ns...> : indices<Ns...> {};
 template <typename T, typename Tuple, size_t... Indices>
 void memberOut(std::ostream &stream, T &in, const Tuple &typeInfo,
                indices<Indices...>) {
+  using namespace magic_enum::ostream_operators;
   ((stream << in.*std::get<Indices>(typeInfo) << " "), ...);
 }
 

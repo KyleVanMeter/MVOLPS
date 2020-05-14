@@ -2,6 +2,8 @@
 #include "spdlog/spdlog.h"
 #include <string>
 #include <variant>
+// std::stringstream
+#include <sstream>
 
 using namespace MVOLP;
 
@@ -150,7 +152,19 @@ void IPCDispatch::write() const {
         "IPCDispatch invalid arguments to specific message constructor");
   }();
 
-  std::visit([](auto &&arg) { std::cout << arg; }, result);
+  std::stringstream msg;
+  std::visit([&msg](auto &&arg) { msg << arg << "\n"; }, result);
+
+  /*
+   * As we have overloaded operator<< for each messagePOD type having the base
+   * message as a member of the derived types will cause operator<< to be called
+   * twice.  Since there is a trailing " " this leads to an erroneous "  " being
+   * placed in the middle of the message.  To avoid refactoring we can just to
+   * string replacement from "  " to " "
+   */
+  std::string sMsg = msg.str();
+  sMsg.replace(sMsg.find("  "), 1, "");
+  std::cout << sMsg;
 
   // Send zmq message to client
 }
