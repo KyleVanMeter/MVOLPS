@@ -29,12 +29,10 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       std::dynamic_pointer_cast<MVOLP::DebugDispatch>(
           MVOLP::BaseMessageDispatch::create("DebugDispatch"));
 
-  /*
   MVOLP::BaseMessageDispatch::define<MVOLP::IPCDispatch>("IPCDispatch");
   std::shared_ptr<MVOLP::IPCDispatch> mqDispatch =
       std::dynamic_pointer_cast<MVOLP::IPCDispatch>(
           MVOLP::BaseMessageDispatch::create("IPCDispatch"));
-  */
 
   CutPool pool;
   tree<MVOLP::SPInfo> subProblems;
@@ -64,7 +62,10 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     int index;
     std::shared_ptr<MVOLP::NodeData> node =
         params.pickNode(leafContainer, index);
+    //mqDispatch->baseFields->oid = node->oid;
     root = treeIndex[node.get()->oid];
+    //mqDispatch->baseFields->pid = subProblems.parent(root)->oid;
+
     logDebug
         ->message(sstr("Current OID: ", node->oid, " with z-value ",
                        node->upperBound))
@@ -95,6 +96,19 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       node.get()->upperBound = glp_get_obj_val(a);
 
       root.node->data.prune = MVOLP::INTG;
+      MVOLP::BaseMessagePOD why;
+      why.oid = node->oid;
+      why.pid = subProblems.parent(root)->oid;
+      why.nodeType = MVOLP::EventType::integer;
+      why.direction = MVOLP::BranchDirection::L;
+      mqDispatch->baseFields = why;
+      //mqDispatch->baseFields->nodeType = MVOLP::EventType::integer;
+      //mqDispatch->baseFields->direction = MVOLP::BranchDirection::L;
+      mqDispatch->field6 = 0.0;
+      mqDispatch->field9 = 0;
+      mqDispatch->field10 = 1;
+      mqDispatch->write();
+
       logInfo
           ->message(sstr("OID: ", node.get()->oid, ".  Pruning integral node."))
           ->write();
