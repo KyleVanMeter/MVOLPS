@@ -221,6 +221,15 @@ class IPCDispatch : public BaseMessageDispatch {
 public:
   virtual void write() const;
   // IPCDispatch *message(std::string in);
+  void clearAll() {
+    baseFields.reset();
+    field6.reset();
+    field7.reset();
+    field8.reset();
+    field9.reset();
+    field10.reset();
+  }
+
   void createServer(int port) {
     _startServer = true;
     _port = port;

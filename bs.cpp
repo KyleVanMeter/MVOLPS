@@ -90,6 +90,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
   int count = 0;
 
   while (!leafContainer.empty()) {
+    mqDispatch->clearAll();
     int index;
     MVOLP::BaseMessagePOD baseMsg;
 
@@ -99,6 +100,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
     baseMsg.oid = node->oid;
     baseMsg.pid = getParentOid(subProblems, treeIndex[baseMsg.oid]);
+    baseMsg.direction = getBranchDirection(baseMsg.oid);
 
     logDebug
         ->message(sstr("Current OID: ", node->oid, " with z-value ",
@@ -143,9 +145,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       root.node->data.prune = MVOLP::INTG;
 
       baseMsg.nodeType = MVOLP::EventType::integer;
-      baseMsg.direction = getBranchDirection(baseMsg.oid);
       mqDispatch->baseFields = baseMsg;
-      mqDispatch->field6 = 0.0;
+      mqDispatch->field6 = node->upperBound;
       mqDispatch->field9 = 0;
       mqDispatch->field10 = 1;
       mqDispatch->write();
@@ -180,6 +181,13 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       // Prune infeasible non-initial sub-problems
 
       root.node->data.prune = MVOLP::FEAS;
+
+      baseMsg.nodeType = MVOLP::EventType::infeasible;
+      mqDispatch->baseFields = baseMsg;
+      mqDispatch->field9 = 0;
+      mqDispatch->field10 = 1;
+      mqDispatch->write();
+
       logInfo
           ->message(sstr("OID: ", node.get()->oid,
                          ".  Pruning non-initial infeasible node"))
