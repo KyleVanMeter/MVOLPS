@@ -18,6 +18,20 @@
 // info and debug
 #include "spdlog/spdlog.h"
 
+int getParentOid(const tree<MVOLP::SPInfo> &probs,
+                 const tree<MVOLP::SPInfo>::iterator &iter) {
+  /*
+   * Calling the tree<T> parent function at the root node causes a segfault in
+   * the library itself.  To get around that we (erroneously) say that the root
+   * of the tree is its own parent.
+   */
+  if (iter->oid <= 1) {
+    return iter->oid;
+  }
+
+  return probs.parent(iter)->oid;
+}
+
 int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
   MVOLP::BaseMessageDispatch::define<MVOLP::LogDispatch>("LogDispatch");
   std::shared_ptr<MVOLP::LogDispatch> logInfo =
@@ -33,6 +47,9 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
   std::shared_ptr<MVOLP::IPCDispatch> mqDispatch =
       std::dynamic_pointer_cast<MVOLP::IPCDispatch>(
           MVOLP::BaseMessageDispatch::create("IPCDispatch"));
+  if (params.isServerEnabled()) {
+    mqDispatch->createServer(params.getServerPort());
+  }
 
   CutPool pool;
   tree<MVOLP::SPInfo> subProblems;
@@ -60,11 +77,14 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
   while (!leafContainer.empty()) {
     int index;
+    MVOLP::BaseMessagePOD baseMsg;
+
     std::shared_ptr<MVOLP::NodeData> node =
         params.pickNode(leafContainer, index);
-    //mqDispatch->baseFields->oid = node->oid;
     root = treeIndex[node.get()->oid];
-    //mqDispatch->baseFields->pid = subProblems.parent(root)->oid;
+
+    baseMsg.oid = node->oid;
+    baseMsg.pid = getParentOid(subProblems, treeIndex[baseMsg.oid]);
 
     logDebug
         ->message(sstr("Current OID: ", node->oid, " with z-value ",
@@ -76,34 +96,42 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     glp_copy_prob(a, node.get()->prob, GLP_OFF);
     glp_simplex(a, NULL);
 
+    std::pair<int, std::vector<int>> ret;
+    std::vector<int> vars;
+      int status;
     if (node.get()->inital) {
-      std::pair<int, std::vector<int>> ret = printInfo(a, true);
-      int status = ret.first;
+      ret = printInfo(a, true);
+      status = ret.first;
+      vars = ret.second;
 
-      if (status != 0) {
+      if (status == -1) {
+        root.node->data.prune = MVOLP::FEAS;
+
         break;
       }
-    }
+      if (status == 1) {
+        node.get()->upperBound = glp_get_obj_val(a);
+        root.node->data.prune = MVOLP::INTG;
 
-    std::pair<int, std::vector<int>> ret = printInfo(a, false);
-    int status = ret.first;
-    std::vector<int> vars = ret.second;
+        break;
+      }
+    } else {
+
+      ret = printInfo(a, false);
+      status = ret.first;
+      vars = ret.second;
+    }
 
     node->upperBound = glp_get_obj_val(a);
 
     if (status == 1) {
       // Prune by integrality
       node.get()->upperBound = glp_get_obj_val(a);
-
       root.node->data.prune = MVOLP::INTG;
-      MVOLP::BaseMessagePOD why;
-      why.oid = node->oid;
-      why.pid = subProblems.parent(root)->oid;
-      why.nodeType = MVOLP::EventType::integer;
-      why.direction = MVOLP::BranchDirection::L;
-      mqDispatch->baseFields = why;
-      //mqDispatch->baseFields->nodeType = MVOLP::EventType::integer;
-      //mqDispatch->baseFields->direction = MVOLP::BranchDirection::L;
+
+      baseMsg.nodeType = MVOLP::EventType::integer;
+      baseMsg.direction = MVOLP::BranchDirection::L;
+      mqDispatch->baseFields = baseMsg;
       mqDispatch->field6 = 0.0;
       mqDispatch->field9 = 0;
       mqDispatch->field10 = 1;
