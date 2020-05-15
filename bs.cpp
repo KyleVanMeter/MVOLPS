@@ -197,6 +197,11 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       // Prune if node is worse then best lower bound
 
       root.node->data.prune = MVOLP::BNDS;
+
+      baseMsg.nodeType = MVOLP::EventType::fathomed;
+      mqDispatch->baseFields = baseMsg;
+      mqDispatch->write();
+
       logInfo
           ->message(sstr("OID: ", node.get()->oid,
                          ".  Pruning worse lower-bounded node"))
