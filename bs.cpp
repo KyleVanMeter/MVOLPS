@@ -18,18 +18,32 @@
 // info and debug
 #include "spdlog/spdlog.h"
 
+/*
+ * Calling the tree<T> parent function at the root node causes a segfault in
+ * the library itself.  To get around that we create a wrapper that
+ * (erroneously) says that the root of the tree is its own parent.
+ */
 int getParentOid(const tree<MVOLP::SPInfo> &probs,
                  const tree<MVOLP::SPInfo>::iterator &iter) {
-  /*
-   * Calling the tree<T> parent function at the root node causes a segfault in
-   * the library itself.  To get around that we (erroneously) say that the root
-   * of the tree is its own parent.
-   */
   if (iter->oid <= 1) {
     return iter->oid;
   }
 
   return probs.parent(iter)->oid;
+}
+
+/*
+ * in grUMPy there is an arbitrary convention for the BNB tree to branch in the middle direction if its the initial subproblem, to the right for an added upper-bound constraint, and left for an added lower-bound constraint.  Unfortunately this is not so easily determined, and to avoid refactoring we must rely on the order in which sub-problems are created (see the end of branchAndBound) which corresponds to an even oid (R), and an odd oid (L)
+ */
+MVOLP::BranchDirection getBranchDirection(const int &oid) {
+  if (oid <= 1) {
+    return MVOLP::BranchDirection::M;
+  }
+  if (oid % 2 == 0) {
+    return MVOLP::BranchDirection::R;
+  } else {
+    return MVOLP::BranchDirection::L;
+  }
 }
 
 int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
@@ -98,7 +112,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
     std::pair<int, std::vector<int>> ret;
     std::vector<int> vars;
-      int status;
+    int status;
     if (node.get()->inital) {
       ret = printInfo(a, true);
       status = ret.first;
@@ -116,7 +130,6 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
         break;
       }
     } else {
-
       ret = printInfo(a, false);
       status = ret.first;
       vars = ret.second;
@@ -130,7 +143,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       root.node->data.prune = MVOLP::INTG;
 
       baseMsg.nodeType = MVOLP::EventType::integer;
-      baseMsg.direction = MVOLP::BranchDirection::L;
+      baseMsg.direction = getBranchDirection(baseMsg.oid);
       mqDispatch->baseFields = baseMsg;
       mqDispatch->field6 = 0.0;
       mqDispatch->field9 = 0;
@@ -149,7 +162,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
                            ".  Updating best lower bound to ", bestLower))
             ->write();
 
-        solution = "";
+        solution = "[" + std::to_string(node->oid) + "] Solution is: ";
         for (int i = 1; i <= glp_get_num_cols(a); i++) {
           if (glp_get_col_prim(a, i) != 0 && glp_get_obj_coef(a, i) != 0) {
             solution += sstr((glp_get_obj_coef(a, i)), "*(x[", i,
@@ -258,7 +271,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     }
   });
 
-  std::cout << "\nSolution is: " + solution + "\n";
+  std::cout << "\n" + solution + "\n";
   logInfo->message(sstr("Solution found after ", count, " iterations"))
       ->write();
 
