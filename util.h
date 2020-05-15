@@ -83,7 +83,9 @@ public:
   bool IsCutEnabled();
   std::tuple<param::VarStratType, param::NodeStratType, param::CutStratType> getStrategy();
 
+  bool isServerEnabled() { return _startServer; }
   void setServerPort(int port);
+  int getServerPort() { return _port; }
 
 private:
   param::VarStratType _varStrat;

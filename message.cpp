@@ -9,13 +9,12 @@ using namespace MVOLP;
 
 void LogDispatch::write() const { spdlog::info(_msg); }
 
-/*
+
 template<class... Args>
-LogDispatch* LogDispatch::message(Args&& ...args) {
-  _msg = sstr(args...);
-  return this;
+void LogDispatch::write(Args&& ...args) {
+  spdlog::info(sstr(args...));
 }
-*/
+
 LogDispatch *LogDispatch::message(std::string in) {
   _msg = in;
   return this;
@@ -23,13 +22,12 @@ LogDispatch *LogDispatch::message(std::string in) {
 
 void DebugDispatch::write() const { spdlog::debug(_msg); }
 
-/*
+
 template<class... Args>
-DebugDispatch* DebugDispatch::message(Args&& ...args) {
-  _msg = sstr(args...);
-  return this;
+void DebugDispatch::write(Args&& ...args) {
+  spdlog::debug(sstr(args...));
 }
-*/
+
 DebugDispatch *DebugDispatch::message(std::string in) {
   _msg = in;
   return this;
@@ -39,6 +37,9 @@ void IPCDispatch::write() const {
   using MessageVariant =
       std::variant<BranchMessagePOD, CandMessagePOD, FathMessagePOD,
                    HeurMessagePOD, InfeasMessagePOD, InteMessagePOD>;
+  if (!_startServer) {
+    return;
+  }
 
   if (!baseFields.has_value()) {
     throw std::invalid_argument("BaseMessagePOD has incomplete information");
@@ -164,9 +165,15 @@ void IPCDispatch::write() const {
    */
   std::string sMsg = msg.str();
   sMsg.replace(sMsg.find("  "), 1, "");
-  std::cout << sMsg;
 
   // Send zmq message to client
+  zmqpp::message message;
+  _socket->receive(message);
+  std::string txt;
+  message >> txt;
+  DebugDispatch::write("Received from client: ", txt);
+
+  _socket->send(sMsg);
 }
 
 // Type definitions for field-helper tuples.  Needed for metaprogramming

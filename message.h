@@ -14,6 +14,8 @@
 #include <type_traits>
 // automatic operator<< for enums (enum to string)
 #include <magic_enum.hpp>
+// zmqpp::socket, zeroMQ
+#include <zmqpp/zmqpp.hpp>
 
 namespace MVOLP {
 template <class Interface, class KeyT = std::string> class Factory {
@@ -76,8 +78,8 @@ BaseMessageDispatch::Factory BaseMessageDispatch::_factory;
 class LogDispatch : public BaseMessageDispatch {
 public:
   virtual void write() const;
+  template <class... Args> static void write(Args &&... args);
 
-  // template <class... Args> LogDispatch *message(Args &&... args);
   LogDispatch *message(std::string in);
 
 private:
@@ -87,8 +89,8 @@ private:
 class DebugDispatch : public BaseMessageDispatch {
 public:
   virtual void write() const;
+  template <class... Args> static void write(Args &&... args);
 
-  // template <class... Args> DebugDispatch *message(Args &&... args);
   DebugDispatch *message(std::string in);
 
 private:
@@ -219,6 +221,14 @@ class IPCDispatch : public BaseMessageDispatch {
 public:
   virtual void write() const;
   // IPCDispatch *message(std::string in);
+  void createServer(int port) {
+    _startServer = true;
+    _port = port;
+
+    _context = new zmqpp::context();
+    _socket = new zmqpp::socket(*_context, zmqpp::socket_type::reply);
+    _socket->bind("tcp://*:" + std::to_string(_port));
+  }
 
   /*
   double timeStamp;
@@ -235,6 +245,11 @@ public:
   std::optional<int> field10;
 
 private:
+  bool _startServer = false;
+  int _port;
+  zmqpp::context *_context;
+  zmqpp::socket *_socket;
+
   std::string _msg;
   std::unique_ptr<BaseMessagePOD> _data;
 };

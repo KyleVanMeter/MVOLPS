@@ -149,8 +149,6 @@ int main(int argc, char **argv) {
     }
 
     branchAndBound(prob, params);
-    //nothing(prob, params);
-
   } else {
     std::cout << "see ./MVOLPS -h for usage\n";
   }
