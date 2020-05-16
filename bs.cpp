@@ -33,7 +33,12 @@ int getParentOid(const tree<MVOLP::SPInfo> &probs,
 }
 
 /*
- * in grUMPy there is an arbitrary convention for the BNB tree to branch in the middle direction if its the initial subproblem, to the right for an added upper-bound constraint, and left for an added lower-bound constraint.  Unfortunately this is not so easily determined, and to avoid refactoring we must rely on the order in which sub-problems are created (see the end of branchAndBound) which corresponds to an even oid (R), and an odd oid (L)
+ * in grUMPy there is an arbitrary convention for the BNB tree to branch in the
+ * middle direction if its the initial subproblem, to the right for an added
+ * upper-bound constraint, and left for an added lower-bound constraint.
+ * Unfortunately this is not so easily determined, and to avoid refactoring we
+ * must rely on the order in which sub-problems are created (see the end of
+ * branchAndBound) which corresponds to an even oid (R), and an odd oid (L)
  */
 MVOLP::BranchDirection getBranchDirection(const int &oid) {
   if (oid <= 1) {
@@ -208,6 +213,24 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
           ->write();
       leafContainer.erase(leafContainer.begin() + index);
     } else {
+      baseMsg.nodeType = MVOLP::EventType::branched;
+      mqDispatch->baseFields = baseMsg;
+      mqDispatch->field6 = node->upperBound;
+      mqDispatch->field7 = [&]() -> double {
+        double acc = 0;
+        for (auto &i : vars) {
+          if (i != 0) {
+            acc += getFract(glp_get_col_prim(node->prob, i));
+          }
+        }
+
+        return acc;
+      }();
+      mqDispatch->field8 = vars.size();
+      mqDispatch->field9 = 0;
+      mqDispatch->field10 = 1;
+      mqDispatch->write();
+
       logDebug->message(sstr("Queue size is ", leafContainer.size()))->write();
       leafContainer.erase(leafContainer.begin() + index);
 
