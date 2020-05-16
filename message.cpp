@@ -9,9 +9,7 @@ using namespace MVOLP;
 
 void LogDispatch::write() const { spdlog::info(_msg); }
 
-
-template<class... Args>
-void LogDispatch::write(Args&& ...args) {
+template <class... Args> void LogDispatch::write(Args &&... args) {
   spdlog::info(sstr(args...));
 }
 
@@ -22,9 +20,7 @@ LogDispatch *LogDispatch::message(std::string in) {
 
 void DebugDispatch::write() const { spdlog::debug(_msg); }
 
-
-template<class... Args>
-void DebugDispatch::write(Args&& ...args) {
+template <class... Args> void DebugDispatch::write(Args &&... args) {
   spdlog::debug(sstr(args...));
 }
 
@@ -36,7 +32,8 @@ DebugDispatch *DebugDispatch::message(std::string in) {
 void IPCDispatch::write() const {
   using MessageVariant =
       std::variant<BranchMessagePOD, CandMessagePOD, FathMessagePOD,
-                   HeurMessagePOD, InfeasMessagePOD, InteMessagePOD>;
+                   HeurMessagePOD, InfeasMessagePOD, PregMessagePOD,
+                   InteMessagePOD>;
   if (!_startServer) {
     return;
   }
@@ -127,6 +124,25 @@ void IPCDispatch::write() const {
         return ret;
       }
       break;
+    case EventType::pregnant:
+      // Field 6, field 9, and field 10 must be present
+      if (field6.has_value() && !field7.has_value() && !field8.has_value() &&
+          field9.has_value() && field10.has_value() && baseFields.has_value()) {
+        PregMessagePOD wtf;
+
+        wtf.baseFields.timeSpan = this->baseFields.value().timeSpan;
+        wtf.baseFields.nodeType = this->baseFields.value().nodeType;
+        wtf.baseFields.oid = this->baseFields.value().oid;
+        wtf.baseFields.pid = this->baseFields.value().pid;
+        wtf.baseFields.direction = this->baseFields.value().direction;
+        wtf.LPBound = field6.value();
+        wtf.bCond = field9.value();
+        wtf.eCond = field10.value();
+
+        ret = wtf;
+        return ret;
+      }
+      break;
     case EventType::integer:
       // Field 6, field 9, and field 10 must be present
       if (field6.has_value() && !field7.has_value() && !field8.has_value() &&
@@ -199,6 +215,11 @@ decltype(BranchMessagePOD::typeInfo) BranchMessagePOD::typeInfo(
 decltype(CandMessagePOD::typeInfo)
     CandMessagePOD::typeInfo(&CandMessagePOD::baseFields,
                              &CandMessagePOD::LPBound);
+
+decltype(PregMessagePOD::typeInfo)
+    PregMessagePOD::typeInfo(&PregMessagePOD::baseFields,
+                             &PregMessagePOD::LPBound, &PregMessagePOD::bCond,
+                             &PregMessagePOD::eCond);
 
 decltype(InteMessagePOD::typeInfo)
     InteMessagePOD::typeInfo(&InteMessagePOD::baseFields,

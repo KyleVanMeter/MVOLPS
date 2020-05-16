@@ -131,6 +131,7 @@ enum EventType {
   infeasible,
   branched,
   candidate,
+  pregnant,
   integer,
   fathomed
 };
@@ -199,6 +200,16 @@ struct CandMessagePOD : public Streamer<CandMessagePOD> {
       typeInfo;
 };
 
+struct PregMessagePOD : public Streamer<PregMessagePOD> {
+  BaseMessagePOD baseFields;
+  double LPBound;
+  int bCond;
+  int eCond;
+  const static std::tuple<
+      decltype(&PregMessagePOD::baseFields), decltype(&PregMessagePOD::LPBound),
+      decltype(&PregMessagePOD::bCond), decltype(&PregMessagePOD::eCond)>
+      typeInfo;
+};
 
 struct InteMessagePOD : public Streamer<InteMessagePOD> {
   BaseMessagePOD baseFields;

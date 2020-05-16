@@ -117,6 +117,18 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     glp_copy_prob(a, node.get()->prob, GLP_OFF);
     glp_simplex(a, NULL);
 
+    MVOLP::BaseMessagePOD pregenantData;
+    pregenantData.nodeType = MVOLP::EventType::pregnant;
+    pregenantData.oid = node->oid;
+    pregenantData.pid = getParentOid(subProblems, treeIndex[node->oid]);
+    pregenantData.direction = getBranchDirection(node->oid);
+    mqDispatch->baseFields = pregenantData;
+    mqDispatch->field6 = glp_get_obj_val(a);
+    mqDispatch->field9 = 0;
+    mqDispatch->field10 = 0;
+    mqDispatch->write();
+    mqDispatch->clearAll();
+
     std::pair<int, std::vector<int>> ret;
     std::vector<int> vars;
     int status;
@@ -153,7 +165,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       mqDispatch->baseFields = baseMsg;
       mqDispatch->field6 = node->upperBound;
       mqDispatch->field9 = 0;
-      mqDispatch->field10 = 1;
+      mqDispatch->field10 = 0;
       mqDispatch->write();
 
       logInfo
@@ -190,7 +202,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       baseMsg.nodeType = MVOLP::EventType::infeasible;
       mqDispatch->baseFields = baseMsg;
       mqDispatch->field9 = 0;
-      mqDispatch->field10 = 1;
+      mqDispatch->field10 = 0;
       mqDispatch->write();
 
       logInfo
@@ -228,7 +240,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       }();
       mqDispatch->field8 = vars.size();
       mqDispatch->field9 = 0;
-      mqDispatch->field10 = 1;
+      mqDispatch->field10 = 0;
       mqDispatch->write();
 
       logDebug->message(sstr("Queue size is ", leafContainer.size()))->write();
@@ -284,6 +296,27 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
       leafContainer.push_back(S2);
       leafContainer.push_back(S3);
+
+      MVOLP::BaseMessagePOD candidateData;
+      mqDispatch->clearAll();
+      candidateData.nodeType = MVOLP::EventType::candidate;
+      candidateData.oid = S2->oid;
+      candidateData.pid = getParentOid(subProblems, treeIndex[S2->oid]);
+      candidateData.direction = getBranchDirection(S2->oid);
+      mqDispatch->baseFields = candidateData;
+      mqDispatch->field6 = S2->upperBound;
+      mqDispatch->write();
+
+      MVOLP::BaseMessagePOD candidateData2;
+      mqDispatch->clearAll();
+      candidateData2.nodeType = MVOLP::EventType::candidate;
+      candidateData2.oid = S3->oid;
+      candidateData2.pid = getParentOid(subProblems, treeIndex[S3->oid]);
+      candidateData2.direction = getBranchDirection(S3->oid);
+      mqDispatch->baseFields = candidateData2;
+      mqDispatch->field6 = S3->upperBound;
+      mqDispatch->write();
+
       if (count > 200000) {
         spdlog::error("Loop limit hit.  Returning early.");
         std::exit(-1);
