@@ -180,7 +180,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
                            ".  Updating best lower bound to ", bestLower))
             ->write();
 
-        solution = "[" + std::to_string(node->oid) + "] Solution is: ";
+        solution = sstr("[", node->oid, "] Solution is: ");
         for (int i = 1; i <= glp_get_num_cols(a); i++) {
           if (glp_get_col_prim(a, i) != 0 && glp_get_obj_coef(a, i) != 0) {
             solution += sstr((glp_get_obj_coef(a, i)), "*(x[", i,
@@ -340,7 +340,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     }
   });
 
-  std::cout << "\n" + solution + "\n";
+  std::cout << sstr("\n", solution, "\n");
   logInfo->message(sstr("Solution found after ", count, " iterations"))
       ->write();
 
