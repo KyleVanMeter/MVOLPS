@@ -21,12 +21,12 @@
 /*
  * Calling the tree<T> parent function at the root node causes a segfault in
  * the library itself.  To get around that we create a wrapper that
- * (erroneously) says that the root of the tree is its own parent.
+ * (erroneously) says that the root of the tree has root 0
  */
 int getParentOid(const tree<MVOLP::SPInfo> &probs,
                  const tree<MVOLP::SPInfo>::iterator &iter) {
-  if (iter->oid <= 1) {
-    return iter->oid;
+  if (iter->oid == 1) {
+    return 0;
   }
 
   return probs.parent(iter)->oid;
@@ -84,7 +84,6 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
   MVOLP::SPInfo in = {S1->oid, MVOLP::NONE};
   tree<MVOLP::SPInfo>::iterator root =
       subProblems.insert(subProblems.begin(), in);
-  subProblems.append_child(root, in);
   treeIndex[S1->oid] = subProblems.begin();
 
   glp_prob *a = glp_create_prob();
@@ -124,8 +123,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     pregenantData.direction = getBranchDirection(node->oid);
     mqDispatch->baseFields = pregenantData;
     mqDispatch->field6 = glp_get_obj_val(a);
-    mqDispatch->field9 = 0;
-    mqDispatch->field10 = 0;
+    mqDispatch->field9 = 1;
+    mqDispatch->field10 = 1;
     mqDispatch->write();
     mqDispatch->clearAll();
 
@@ -164,8 +163,6 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       baseMsg.nodeType = MVOLP::EventType::integer;
       mqDispatch->baseFields = baseMsg;
       mqDispatch->field6 = node->upperBound;
-      mqDispatch->field9 = 0;
-      mqDispatch->field10 = 0;
       mqDispatch->write();
 
       logInfo
@@ -201,8 +198,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
       baseMsg.nodeType = MVOLP::EventType::infeasible;
       mqDispatch->baseFields = baseMsg;
-      mqDispatch->field9 = 0;
-      mqDispatch->field10 = 0;
+      mqDispatch->field9 = 1;
+      mqDispatch->field10 = 1;
       mqDispatch->write();
 
       logInfo
@@ -239,8 +236,8 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
         return acc;
       }();
       mqDispatch->field8 = vars.size();
-      mqDispatch->field9 = 0;
-      mqDispatch->field10 = 0;
+      mqDispatch->field9 = 1;
+      mqDispatch->field10 = 1;
       mqDispatch->write();
 
       logDebug->message(sstr("Queue size is ", leafContainer.size()))->write();
