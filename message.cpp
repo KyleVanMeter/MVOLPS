@@ -144,9 +144,9 @@ void IPCDispatch::write() const {
       }
       break;
     case EventType::integer:
-      // Field 6, field 9, and field 10 must be present
+      // Field 6 must be present
       if (field6.has_value() && !field7.has_value() && !field8.has_value() &&
-          field9.has_value() && field10.has_value() && baseFields.has_value()) {
+          !field9.has_value() && !field10.has_value() && baseFields.has_value()) {
         InteMessagePOD wtf;
 
         wtf.baseFields.timeSpan = this->baseFields.value().timeSpan;
@@ -155,8 +155,6 @@ void IPCDispatch::write() const {
         wtf.baseFields.pid = this->baseFields.value().pid;
         wtf.baseFields.direction = this->baseFields.value().direction;
         wtf.LPBound = field6.value();
-        wtf.bCond = field9.value();
-        wtf.eCond = field10.value();
 
         ret = wtf;
         return ret;
@@ -223,8 +221,7 @@ decltype(PregMessagePOD::typeInfo)
 
 decltype(InteMessagePOD::typeInfo)
     InteMessagePOD::typeInfo(&InteMessagePOD::baseFields,
-                             &InteMessagePOD::LPBound, &InteMessagePOD::bCond,
-                             &InteMessagePOD::eCond);
+                             &InteMessagePOD::LPBound);
 
 decltype(FathMessagePOD::typeInfo)
     FathMessagePOD::typeInfo(&FathMessagePOD::baseFields);

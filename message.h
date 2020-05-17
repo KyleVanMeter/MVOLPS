@@ -214,12 +214,9 @@ struct PregMessagePOD : public Streamer<PregMessagePOD> {
 struct InteMessagePOD : public Streamer<InteMessagePOD> {
   BaseMessagePOD baseFields;
   double LPBound;
-  int bCond;
-  int eCond;
 
-  const static std::tuple<
-      decltype(&InteMessagePOD::baseFields), decltype(&InteMessagePOD::LPBound),
-      decltype(&InteMessagePOD::bCond), decltype(&InteMessagePOD::eCond)>
+  const static std::tuple<decltype(&InteMessagePOD::baseFields),
+                          decltype(&InteMessagePOD::LPBound)>
       typeInfo;
 };
 
