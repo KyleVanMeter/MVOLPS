@@ -100,7 +100,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
     std::shared_ptr<MVOLP::NodeData> node =
         params.pickNode(leafContainer, index);
-    root = treeIndex[node.get()->oid];
+    root = treeIndex[node->oid];
 
     baseMsg.oid = node->oid;
     baseMsg.pid = getParentOid(subProblems, treeIndex[baseMsg.oid]);
@@ -113,7 +113,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     logDebug->message(sstr("Container size: ", leafContainer.size()))->write();
     glp_erase_prob(a);
     a = glp_create_prob();
-    glp_copy_prob(a, node.get()->prob, GLP_OFF);
+    glp_copy_prob(a, node->prob, GLP_OFF);
     glp_simplex(a, NULL);
 
     MVOLP::BaseMessagePOD pregenantData;
@@ -124,14 +124,14 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
     mqDispatch->baseFields = pregenantData;
     mqDispatch->field6 = glp_get_obj_val(a);
     mqDispatch->field9 = 1;
-    mqDispatch->field10 = 1;
+    mqDispatch->field10 = 2;
     mqDispatch->write();
     mqDispatch->clearAll();
 
     std::pair<int, std::vector<int>> ret;
     std::vector<int> vars;
     int status;
-    if (node.get()->inital) {
+    if (node->inital) {
       ret = printInfo(a, true);
       status = ret.first;
       vars = ret.second;
@@ -142,7 +142,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
         break;
       }
       if (status == 1) {
-        node.get()->upperBound = glp_get_obj_val(a);
+        node->upperBound = glp_get_obj_val(a);
         root.node->data.prune = MVOLP::INTG;
 
         break;
@@ -157,7 +157,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
 
     if (status == 1) {
       // Prune by integrality
-      node.get()->upperBound = glp_get_obj_val(a);
+      node->upperBound = glp_get_obj_val(a);
       root.node->data.prune = MVOLP::INTG;
 
       baseMsg.nodeType = MVOLP::EventType::integer;
@@ -166,14 +166,14 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       mqDispatch->write();
 
       logInfo
-          ->message(sstr("OID: ", node.get()->oid, ".  Pruning integral node."))
+          ->message(sstr("OID: ", node->oid, ".  Pruning integral node."))
           ->write();
 
-      if (node.get()->upperBound > bestLower) {
+      if (node->upperBound > bestLower) {
         // Current best solution
-        bestLower = node.get()->upperBound;
+        bestLower = node->upperBound;
         logInfo
-            ->message(sstr("OID: ", node.get()->oid,
+            ->message(sstr("OID: ", node->oid,
                            ".  Updating best lower bound to ", bestLower))
             ->write();
 
@@ -199,11 +199,11 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       baseMsg.nodeType = MVOLP::EventType::infeasible;
       mqDispatch->baseFields = baseMsg;
       mqDispatch->field9 = 1;
-      mqDispatch->field10 = 1;
+      mqDispatch->field10 = 2;
       mqDispatch->write();
 
       logInfo
-          ->message(sstr("OID: ", node.get()->oid,
+          ->message(sstr("OID: ", node->oid,
                          ".  Pruning non-initial infeasible node"))
           ->write();
       leafContainer.erase(leafContainer.begin() + index);
@@ -217,7 +217,7 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
       mqDispatch->write();
 
       logInfo
-          ->message(sstr("OID: ", node.get()->oid,
+          ->message(sstr("OID: ", node->oid,
                          ".  Pruning worse lower-bounded node"))
           ->write();
       leafContainer.erase(leafContainer.begin() + index);
@@ -229,15 +229,18 @@ int branchAndBound(glp_prob *prob, MVOLP::ParameterObj &params) {
         double acc = 0;
         for (auto &i : vars) {
           if (i != 0) {
-            acc += getFract(glp_get_col_prim(node->prob, i));
+            acc += getFract(glp_get_col_prim(a, i));
           }
+        }
+        if (acc == 0) {
+          spdlog::error("acc is 0");
         }
 
         return acc;
       }();
       mqDispatch->field8 = vars.size();
       mqDispatch->field9 = 1;
-      mqDispatch->field10 = 1;
+      mqDispatch->field10 = 2;
       mqDispatch->write();
 
       logDebug->message(sstr("Queue size is ", leafContainer.size()))->write();
