@@ -228,9 +228,11 @@ struct FathMessagePOD : public Streamer<FathMessagePOD> {
 class IPCDispatch : public BaseMessageDispatch {
 public:
   ~IPCDispatch() {
-    zmqpp::message tmp;
-    _socket->receive(tmp);
-    _socket->send("END");
+    if (_startServer) {
+      zmqpp::message tmp;
+      _socket->receive(tmp);
+      _socket->send("END");
+    }
   }
   virtual void write() const;
   // IPCDispatch *message(std::string in);
